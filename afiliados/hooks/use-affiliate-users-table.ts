@@ -1,60 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useMemo, useState } from "react";
+import { useAsync } from "@/hooks/use-async";
+import { usersService } from "@/lib/services/users.service";
+import type { AffiliateUser, AffiliateUserStatus } from "@/lib/types/account.types";
 
-export type AffiliateUserStatus = "active" | "inactive" | "pending";
-
-export interface AffiliateUser {
-  id: string;
-  nome: string;
-  email: string;
-  status: AffiliateUserStatus;
-  lastActive: string;
-  createdAt: string;
-}
+export type { AffiliateUser, AffiliateUserStatus };
 
 export function useAffiliateUsersTable() {
-  const { toast } = useToast();
-  const [users, setUsers] = useState<AffiliateUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
+  const { data, loading, error } = useAsync(
+    () => usersService.list(),
+    [],
+  );
 
-    try {
-      const response = await fetch("/api/account/affiliate/list", {
-        cache: "no-store",
-      });
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data?.error || "Não foi possível carregar os usuários.");
-      }
-
-      setUsers(data.users);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Não foi possível carregar os dados dos usuários.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    void fetchUsers();
-  }, [fetchUsers]);
+  const users = data ?? [];
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = searchTerm.toLowerCase();
-
     return users.filter(
       (user) =>
         user.nome.toLowerCase().includes(normalizedSearch) ||
@@ -63,6 +27,7 @@ export function useAffiliateUsersTable() {
   }, [searchTerm, users]);
 
   return {
+    error,
     filteredUsers,
     loading,
     searchTerm,

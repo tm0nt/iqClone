@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 const pageLabels: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/dashboard/statistics": "Estatísticas",
-  "/dashboard/users": "Usuários",
   "/dashboard/offers": "Ofertas",
   "/dashboard/withdrawals": "Saques",
   "/dashboard/settings": "Configurações",

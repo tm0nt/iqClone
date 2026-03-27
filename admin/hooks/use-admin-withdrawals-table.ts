@@ -1,201 +1,120 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { format, subDays } from "date-fns";
+import { useCallback, useMemo, useState } from "react";
+import { subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { useToast } from "@/components/ui/use-toast";
+import { useAsync } from "@/hooks/use-async";
+import { withdrawalsService } from "@/lib/services/withdrawals.service";
+import type { AdminWithdrawal } from "@/lib/types/withdrawals.types";
 
-export interface AdminWithdrawal {
-  id: string;
-  status: string;
-  tipo: string;
-  valor: number;
-  chave: string;
-  tipoChave: string;
-  email: string;
-  dataPedido: string;
-  dataPagamento: string | null;
-  nomeCliente: string;
-  user: {
-    nome?: string | null;
-    email?: string | null;
-  } | null;
-  taxa: number;
-  idCliente: string;
-  userId?: string;
-}
-
-interface WithdrawalsResponse {
-  withdrawals: AdminWithdrawal[];
-  total: number;
-  totalPaid: number;
-  totalPending: number;
-  totalPaidValue: number;
-  totalPendingValue: number;
-  totalValue: number;
-}
+export type { AdminWithdrawal };
 
 const ITEMS_PER_PAGE = 10;
 
 export function useAdminWithdrawalsTable() {
   const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState<AdminWithdrawal | null>(null);
-  const [withdrawals, setWithdrawals] = useState<AdminWithdrawal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPaid, setTotalPaid] = useState(0);
-  const [totalPending, setTotalPending] = useState(0);
-  const [totalPendingValue, setTotalPendingValue] = useState(0);
-  const [totalPaidValue, setTotalPaidValue] = useState(0);
-  const [totalValue, setTotalValue] = useState(0);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 30),
     to: new Date(),
   });
 
-  const fetchWithdrawals = useCallback(async (page = currentPage) => {
-    setLoading(true);
+  const { data, loading, refetch } = useAsync(
+    () => withdrawalsService.list(currentPage, ITEMS_PER_PAGE, dateRange),
+    [currentPage, dateRange?.from, dateRange?.to],
+  );
 
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(ITEMS_PER_PAGE),
-      });
-
-      if (dateRange?.from) {
-        params.set("startDate", format(dateRange.from, "yyyy-MM-dd"));
-      }
-
-      if (dateRange?.to) {
-        params.set("endDate", format(dateRange.to, "yyyy-MM-dd"));
-      }
-
-      const response = await fetch(`/api/admin/withdrawals?${params.toString()}`, {
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao buscar saques");
-      }
-
-      const data: WithdrawalsResponse = await response.json();
-      setWithdrawals(data.withdrawals);
-      setTotalItems(data.total);
-      setTotalPaid(data.totalPaid);
-      setTotalPending(data.totalPending);
-      setTotalPaidValue(data.totalPaidValue);
-      setTotalPendingValue(data.totalPendingValue);
-      setTotalValue(data.totalValue);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os saques",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, dateRange, toast]);
-
-  useEffect(() => {
-    void fetchWithdrawals(currentPage);
-  }, [currentPage, dateRange?.from, dateRange?.to, fetchWithdrawals]);
-
-  const filteredWithdrawals = useMemo(() => {
-    const normalizedSearch = searchTerm.toLowerCase();
-
-    return withdrawals.filter((withdrawal) => {
-      const matchSearch =
-        !normalizedSearch ||
-        withdrawal.nomeCliente.toLowerCase().includes(normalizedSearch) ||
-        withdrawal.email.toLowerCase().includes(normalizedSearch) ||
-        withdrawal.chave.includes(searchTerm);
-      const matchStatus =
-        statusFilter === "all" || withdrawal.status === statusFilter;
-      const matchType =
-        typeFilter === "all" || withdrawal.tipo === typeFilter;
-
-      return matchSearch && matchStatus && matchType;
-    });
-  }, [searchTerm, statusFilter, typeFilter, withdrawals]);
-
-  const handleViewDetails = useCallback(async (withdrawal: AdminWithdrawal) => {
-    try {
-      const response = await fetch(`/api/admin/withdrawals/${withdrawal.id}`, {
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao carregar detalhes");
-      }
-
-      setSelected(await response.json());
-      setDetailOpen(true);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os detalhes do saque",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
-
-  const handleApprove = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`/api/admin/withdrawals/${id}/approve`, {
-        method: "PUT",
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao aprovar");
-      }
-
-      toast({
-        title: "Sucesso",
-        description: "Saque aprovado com sucesso",
-      });
-      await fetchWithdrawals(currentPage);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Não foi possível aprovar o saque",
-        variant: "destructive",
-      });
-    }
-  }, [currentPage, fetchWithdrawals, toast]);
-
-  const handleReject = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`/api/admin/withdrawals/${id}/reject`, {
-        method: "PUT",
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao rejeitar");
-      }
-
-      toast({
-        title: "Sucesso",
-        description: "Saque rejeitado com sucesso",
-      });
-      await fetchWithdrawals(currentPage);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Não foi possível rejeitar o saque",
-        variant: "destructive",
-      });
-    }
-  }, [currentPage, fetchWithdrawals, toast]);
-
+  const withdrawals = data?.withdrawals ?? [];
+  const totalItems = data?.total ?? 0;
+  const totalPaid = data?.totalPaid ?? 0;
+  const totalPending = data?.totalPending ?? 0;
+  const totalPaidValue = data?.totalPaidValue ?? 0;
+  const totalPendingValue = data?.totalPendingValue ?? 0;
+  const totalValue = data?.totalValue ?? 0;
   const totalPages = useMemo(
     () => Math.ceil(totalItems / ITEMS_PER_PAGE),
     [totalItems],
+  );
+
+  const filteredWithdrawals = useMemo(() => {
+    const normalizedSearch = searchTerm.toLowerCase();
+    return withdrawals.filter((w) => {
+      const matchSearch =
+        !normalizedSearch ||
+        w.nomeCliente.toLowerCase().includes(normalizedSearch) ||
+        w.email.toLowerCase().includes(normalizedSearch) ||
+        w.chave.includes(searchTerm);
+      const matchStatus =
+        statusFilter === "all" || w.status === statusFilter;
+      const matchType = typeFilter === "all" || w.tipo === typeFilter;
+      return matchSearch && matchStatus && matchType;
+    });
+  }, [withdrawals, searchTerm, statusFilter, typeFilter]);
+
+  const handleViewDetails = useCallback(
+    async (withdrawal: AdminWithdrawal) => {
+      try {
+        const detail = await withdrawalsService.getById(withdrawal.id);
+        setSelected(detail);
+        setDetailOpen(true);
+      } catch (e) {
+        toast({
+          title: "Erro",
+          description:
+            e instanceof Error
+              ? e.message
+              : "Não foi possível carregar os detalhes do saque",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast],
+  );
+
+  const handleApprove = useCallback(
+    async (id: string) => {
+      try {
+        await withdrawalsService.approve(id);
+        toast({ title: "Sucesso", description: "Saque aprovado com sucesso" });
+        await refetch();
+      } catch (e) {
+        toast({
+          title: "Erro",
+          description:
+            e instanceof Error
+              ? e.message
+              : "Não foi possível aprovar o saque",
+          variant: "destructive",
+        });
+      }
+    },
+    [refetch, toast],
+  );
+
+  const handleReject = useCallback(
+    async (id: string) => {
+      try {
+        await withdrawalsService.reject(id);
+        toast({ title: "Sucesso", description: "Saque rejeitado com sucesso" });
+        await refetch();
+      } catch (e) {
+        toast({
+          title: "Erro",
+          description:
+            e instanceof Error
+              ? e.message
+              : "Não foi possível rejeitar o saque",
+          variant: "destructive",
+        });
+      }
+    },
+    [refetch, toast],
   );
 
   return {
@@ -215,7 +134,7 @@ export function useAdminWithdrawalsTable() {
     totalPendingValue,
     totalValue,
     typeFilter,
-    fetchWithdrawals,
+    fetchWithdrawals: refetch,
     handleApprove,
     handleReject,
     handleViewDetails,

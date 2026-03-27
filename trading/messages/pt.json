@@ -638,7 +638,9 @@
     "sellAll": "Vender todas ({count})",
     "modalInvested": "Investimento",
     "modalExpectedProfit": "Lucro esperado",
-    "modalSellPnL": "Lucro após a venda (L/P)"
+    "modalSellPnL": "Lucro após a venda (L/P)",
+    "noTradingPairs": "Sem paridades cadastradas",
+    "noTradingPairsDescription": "Nenhuma paridade ativa esta disponivel no momento."
   },
     "Loading": {
     "connecting": "Conectando...",

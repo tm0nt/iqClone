@@ -26,7 +26,7 @@ async function getDefaultPayoutRate(): Promise<number> {
 }
 
 function inferProviderSlug(symbol: string) {
-  return /(USDT|BUSD|BTC|ETH|BNB)$/i.test(symbol) ? "binance" : "itick";
+  return /(USDT|BUSD|BTC|ETH|BNB)$/i.test(symbol) ? "binance" : "tiingo";
 }
 
 /**
@@ -70,8 +70,12 @@ export const tradeService = {
     }
 
     const [pair, defaultPayoutRate, platformConfig, revenuePromotion] = await Promise.all([
-      prisma.tradingPair.findUnique({
+      prisma.tradingPair.findFirst({
         where: { symbol: input.ativo.toUpperCase() },
+        orderBy: [
+          { marketProvider: { sortOrder: "asc" } },
+          { displayOrder: "asc" },
+        ],
         select: {
           id: true,
           payoutRate: true,

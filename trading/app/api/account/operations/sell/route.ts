@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         operation.providerSlug ||
         pair?.marketProvider?.slug ||
         pair?.priceSource ||
-        "itick";
+        "tiingo";
       const marketSymbol =
         operation.marketSymbol ||
         pair?.priceSymbol ||

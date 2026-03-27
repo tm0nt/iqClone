@@ -28,7 +28,7 @@ export default function AuthPage() {
       <div className="min-h-screen platform-auth-bg theme-transition relative overflow-hidden">
         <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex justify-center px-4 pt-8">
           <div className="pointer-events-auto flex items-center justify-center">
-            <Logo width={180} variant="auto" />
+            <Logo width={180} variant="dark" />
           </div>
         </div>
 

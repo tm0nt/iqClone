@@ -1,110 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { useCallback, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAsync } from "@/hooks/use-async";
+import { clientsService } from "@/lib/services/clients.service";
+import type { AdminClient } from "@/lib/types/clients.types";
 
-export interface AdminClient {
-  id: string;
-  name: string;
-  email: string;
-  cpf: string;
-  phone: string | null;
-  birthDate: string | null;
-  documentType: string | null;
-  documentNumber: string | null;
-  realBalance: number;
-  demoBalance: number;
-  commissionBalance: number;
-  totalDeposited: number;
-  totalWithdrawn: number;
-  registrationDate: string;
-}
-
-type RawClient = {
-  id: string;
-  nome: string;
-  email: string;
-  cpf?: string | null;
-  telefone?: string | null;
-  dataNascimento?: string | null;
-  documentoTipo?: string | null;
-  documentoNumero?: string | null;
-  saldoReal?: number | null;
-  saldoDemo?: number | null;
-  saldoComissao?: number | null;
-  totalDepositado?: number | null;
-  totalSacado?: number | null;
-  createdAt: string;
-};
+export type { AdminClient };
 
 const ITEMS_PER_PAGE = 10;
 
-const mapClient = (user: RawClient): AdminClient => ({
-  id: user.id,
-  name: user.nome,
-  email: user.email,
-  cpf: user.cpf || "",
-  phone: user.telefone || "",
-  birthDate: user.dataNascimento
-    ? format(new Date(user.dataNascimento), "dd/MM/yyyy")
-    : "",
-  documentType: user.documentoTipo || "",
-  documentNumber: user.documentoNumero || "",
-  realBalance: user.saldoReal || 0,
-  demoBalance: user.saldoDemo || 0,
-  commissionBalance: user.saldoComissao || 0,
-  totalDeposited: user.totalDepositado || 0,
-  totalWithdrawn: user.totalSacado || 0,
-  registrationDate: format(new Date(user.createdAt), "dd/MM/yyyy"),
-});
-
 export function useAdminClientsTable() {
   const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<AdminClient | null>(null);
+  const [selectedClient, setSelectedClient] = useState<AdminClient | null>(
+    null,
+  );
   const [editedClient, setEditedClient] = useState<Partial<AdminClient>>({});
-  const [clients, setClients] = useState<AdminClient[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
 
-  const fetchClients = useCallback(async (page = currentPage) => {
-    setLoading(true);
+  const { data, loading, refetch } = useAsync(
+    () => clientsService.list(currentPage, ITEMS_PER_PAGE),
+    [currentPage],
+  );
 
-    try {
-      const response = await fetch(
-        `/api/admin/clients/list?page=${page}&limit=${ITEMS_PER_PAGE}`,
-        { cache: "no-store" },
-      );
-
-      if (!response.ok) {
-        throw new Error("Erro ao buscar clientes");
-      }
-
-      const data = await response.json();
-      setClients((data.clients as RawClient[]).map(mapClient));
-      setTotalItems(data.total);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os clientes",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, toast]);
-
-  useEffect(() => {
-    void fetchClients(currentPage);
-  }, [currentPage, fetchClients]);
+  const clients = data?.clients ?? [];
+  const totalItems = data?.total ?? 0;
+  const totalPages = useMemo(
+    () => Math.ceil(totalItems / ITEMS_PER_PAGE),
+    [totalItems],
+  );
 
   const filteredClients = useMemo(() => {
     const normalizedSearch = searchTerm.toLowerCase();
-
     return clients.filter(
       (client) =>
         client.name.toLowerCase().includes(normalizedSearch) ||
@@ -113,121 +43,64 @@ export function useAdminClientsTable() {
     );
   }, [clients, searchTerm]);
 
-  const totalPages = useMemo(
-    () => Math.ceil(totalItems / ITEMS_PER_PAGE),
-    [totalItems],
+  const handleEditClient = useCallback(
+    async (client: AdminClient) => {
+      setSelectedClient(client);
+      try {
+        const clientData = await clientsService.getById(client.id);
+        setEditedClient(clientData);
+        setIsEditDialogOpen(true);
+      } catch (e) {
+        toast({
+          title: "Erro",
+          description:
+            e instanceof Error
+              ? e.message
+              : "Não foi possível carregar os detalhes do cliente",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast],
   );
 
-  const handleEditClient = useCallback(async (client: AdminClient) => {
-    setSelectedClient(client);
-
-    try {
-      const response = await fetch(
-        `/api/admin/clients/search?userId=${client.id}`,
-        { cache: "no-store" },
-      );
-
-      if (!response.ok) {
-        throw new Error("Erro ao buscar detalhes");
-      }
-
-      const clientData = await response.json();
-
-      setEditedClient({
-        ...clientData,
-        name: clientData.name,
-        birthDate: clientData.birthDate
-          ? format(new Date(clientData.birthDate), "yyyy-MM-dd")
-          : "",
-        realBalance: clientData.realBalance || 0,
-        demoBalance: clientData.demoBalance || 0,
-        commissionBalance: clientData.commissionBalance || 0,
-        totalDeposited: clientData.totalDeposited ?? 0,
-        totalWithdrawn: clientData.totalWithdrawn ?? 0,
-      });
-      setIsEditDialogOpen(true);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os detalhes do cliente",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
-
   const handleSaveEdit = useCallback(async () => {
-    if (!editedClient.id) {
-      return;
-    }
-
+    if (!editedClient.id) return;
     try {
-      const response = await fetch("/api/admin/clients", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: editedClient.id,
-          nome: editedClient.name,
-          email: editedClient.email,
-          cpf: editedClient.cpf,
-          telefone: editedClient.phone || "",
-          dataNascimento: editedClient.birthDate,
-          documentoTipo: editedClient.documentType || "",
-          documentoNumero: editedClient.documentNumber || "",
-          saldoReal: Number(editedClient.realBalance),
-          saldoDemo: Number(editedClient.demoBalance),
-          saldoComissao: Number(editedClient.commissionBalance),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao atualizar");
-      }
-
-      toast({
-        title: "Sucesso",
-        description: "Cliente atualizado com sucesso",
-      });
-      await fetchClients(currentPage);
+      await clientsService.update(editedClient);
+      toast({ title: "Sucesso", description: "Cliente atualizado com sucesso" });
+      await refetch();
       setIsEditDialogOpen(false);
-    } catch {
+    } catch (e) {
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o cliente",
+        description:
+          e instanceof Error
+            ? e.message
+            : "Não foi possível atualizar o cliente",
         variant: "destructive",
       });
     }
-  }, [currentPage, editedClient, fetchClients, toast]);
+  }, [editedClient, refetch, toast]);
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!selectedClient) {
-      return;
-    }
-
+    if (!selectedClient) return;
     try {
-      const response = await fetch("/api/admin/clients/delete", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: selectedClient.id }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao deletar");
-      }
-
-      toast({
-        title: "Sucesso",
-        description: "Cliente deletado com sucesso",
-      });
-      await fetchClients(currentPage);
+      await clientsService.delete(selectedClient.id);
+      toast({ title: "Sucesso", description: "Cliente deletado com sucesso" });
+      await refetch();
       setIsDeleteDialogOpen(false);
-    } catch {
+    } catch (e) {
       toast({
         title: "Erro",
-        description: "Não foi possível deletar o cliente",
+        description:
+          e instanceof Error
+            ? e.message
+            : "Não foi possível deletar o cliente",
         variant: "destructive",
       });
     }
-  }, [currentPage, fetchClients, selectedClient, toast]);
+  }, [refetch, selectedClient, toast]);
 
   return {
     clients,
@@ -242,7 +115,7 @@ export function useAdminClientsTable() {
     selectedClient,
     totalItems,
     totalPages,
-    fetchClients,
+    fetchClients: refetch,
     handleConfirmDelete,
     handleEditClient,
     handleSaveEdit,

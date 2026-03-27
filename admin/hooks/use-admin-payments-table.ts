@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 export interface AdminPaymentRow {
   id: string;
@@ -12,6 +12,7 @@ export interface AdminPaymentRow {
   invoice?: string;
 }
 
+// TODO: substituir por endpoint real quando disponível
 const MOCK_PAYMENTS: AdminPaymentRow[] = [
   {
     id: "1",
@@ -76,30 +77,16 @@ const MOCK_PAYMENTS: AdminPaymentRow[] = [
 ];
 
 export function useAdminPaymentsTable(searchQuery = "") {
-  const [payments, setPayments] = useState<AdminPaymentRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setPayments(MOCK_PAYMENTS);
-      setLoading(false);
-    }, 1000);
-
-    return () => window.clearTimeout(timer);
-  }, []);
+  const [loading] = useState(false);
 
   const filteredPayments = useMemo(() => {
     const normalizedSearch = searchQuery.toLowerCase();
-
-    return payments.filter(
+    return MOCK_PAYMENTS.filter(
       (payment) =>
         payment.reference.toLowerCase().includes(normalizedSearch) ||
         payment.method.toLowerCase().includes(normalizedSearch),
     );
-  }, [payments, searchQuery]);
+  }, [searchQuery]);
 
-  return {
-    filteredPayments,
-    loading,
-  };
+  return { filteredPayments, loading };
 }

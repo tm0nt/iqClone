@@ -6,9 +6,10 @@ import { resolveLogoForBackground } from "@shared/platform/branding";
 interface LogoProps {
   onDataLoaded?: (data: { logoUrl: string; nome: string }) => void;
   width?: number;
+  background?: "auto" | "light" | "dark";
 }
 
-export function Logo({ onDataLoaded, width = 200 }: LogoProps) {
+export function Logo({ onDataLoaded, width = 200, background = "auto" }: LogoProps) {
   const [data, setData] = useState({
     logoDark: "/logo.png",
     logoWhite: "/logo.png",
@@ -82,12 +83,17 @@ export function Logo({ onDataLoaded, width = 200 }: LogoProps) {
     };
   }, [onDataLoaded, isLoaded]);
 
-  const resolvedLogo = resolveLogoForBackground({
-    backgroundColor: data.backgroundColor,
-    logoDark: data.logoDark,
-    logoWhite: data.logoWhite,
-    fallback: "/logo.png",
-  });
+  const resolvedLogo =
+    background === "light"
+      ? data.logoDark || data.logoWhite || "/logo.png"
+      : background === "dark"
+        ? data.logoWhite || data.logoDark || "/logo.png"
+        : resolveLogoForBackground({
+            backgroundColor: data.backgroundColor,
+            logoDark: data.logoDark,
+            logoWhite: data.logoWhite,
+            fallback: "/logo.png",
+          });
 
   return (
     <div className="flex items-center">

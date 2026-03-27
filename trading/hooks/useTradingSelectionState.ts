@@ -79,6 +79,15 @@ export function useTradingSelectionState() {
   const [openCharts, setOpenCharts] = useState<string[]>([]);
   const [currentChart, setCurrentChart] = useState("");
   const [tradingPair, setTradingPair] = useState("");
+  const [pairsLoaded, setPairsLoaded] = useState(false);
+
+  const clearSelection = useCallback(() => {
+    setCryptos([]);
+    setSelectedCrypto(undefined);
+    setTradingPair("");
+    setCurrentChart("");
+    setOpenCharts([]);
+  }, []);
 
   const handleCryptoSelect = useCallback(
     (crypto: ForexPair, _addOnly: boolean) => {
@@ -183,43 +192,25 @@ export function useTradingSelectionState() {
           : null;
       const preferredActiveSymbol = await getPreferredPendingSymbol();
 
-      const applyFallbackSelection = () => {
-        if (cancelled) {
-          return;
-        }
-
-        const fallbackPair =
-          initialForexPairs.find(
-            (pair) => pair.symbol === preferredActiveSymbol,
-          ) ??
-          initialForexPairs.find((pair) => pair.symbol === savedSymbol) ??
-          getRandomPair(initialForexPairs);
-
-        if (!fallbackPair) {
-          return;
-        }
-
-        setCryptos(initialForexPairs);
-        setSelectedCrypto(fallbackPair);
-        setTradingPair(fallbackPair.symbol);
-        setCurrentChart(fallbackPair.symbol);
-        setOpenCharts([fallbackPair.symbol]);
-        persistSelectedPair(fallbackPair.symbol);
-      };
-
       try {
         const response = await fetch("/api/config/pairs", {
           credentials: "include",
         });
 
         if (!response.ok) {
-          applyFallbackSelection();
+          if (!cancelled) {
+            clearSelection();
+            setPairsLoaded(true);
+          }
           return;
         }
 
         const data = await response.json();
         if (!Array.isArray(data) || data.length === 0 || cancelled) {
-          applyFallbackSelection();
+          if (!cancelled) {
+            clearSelection();
+            setPairsLoaded(true);
+          }
           return;
         }
 
@@ -239,8 +230,12 @@ export function useTradingSelectionState() {
         setCurrentChart(resolvedInitialPair.symbol);
         setOpenCharts([resolvedInitialPair.symbol]);
         persistSelectedPair(resolvedInitialPair.symbol);
+        setPairsLoaded(true);
       } catch (error) {
-        applyFallbackSelection();
+        if (!cancelled) {
+          clearSelection();
+          setPairsLoaded(true);
+        }
 
         if (process.env.NODE_ENV !== "production") {
           console.error("Erro ao carregar paridades:", error);
@@ -253,7 +248,7 @@ export function useTradingSelectionState() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [clearSelection]);
 
   return {
     cryptos,
@@ -267,5 +262,7 @@ export function useTradingSelectionState() {
     removeChart,
     handleToggleFavorite,
     handleUpdateCryptos,
+    pairsLoaded,
+    hasAvailablePairs: cryptos.length > 0,
   };
 }

@@ -17,6 +17,7 @@ import { useActiveOperations } from "@/hooks/useActiveOperations";
 import { useTradingGeneralConfig } from "@/hooks/useTradingGeneralConfig";
 import { useTradingSelectionState } from "@/hooks/useTradingSelectionState";
 import { useTickSound } from "@/hooks/use-tick-sound";
+import { useTranslations } from "next-intl";
 
 type OrdersRef = Record<string, NodeJS.Timeout>;
 type TradingSidebarPanel =
@@ -28,6 +29,7 @@ type TradingSidebarPanel =
   | null;
 
 export default function Home() {
+  const t = useTranslations("StockChart");
   const [orders, setOrders] = useState<Order[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number>(0);
   const [sidebarPanel, setSidebarPanel] = useState<TradingSidebarPanel>(null);
@@ -57,6 +59,8 @@ export default function Home() {
     removeChart,
     handleToggleFavorite,
     handleUpdateCryptos,
+    pairsLoaded,
+    hasAvailablePairs,
   } = useTradingSelectionState();
 
   // --- New hooks ---
@@ -257,6 +261,15 @@ export default function Home() {
                   chartBackgroundUrl={chartBackgroundUrl}
                   tradeHoverDirection={tradeHoverDirection}
                 />
+              ) : pairsLoaded && !hasAvailablePairs ? (
+                <div className="flex h-full w-full items-center justify-center bg-black px-6">
+                  <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 px-6 py-8 text-center text-white backdrop-blur-sm">
+                    <h2 className="text-xl font-semibold">{t("noTradingPairs")}</h2>
+                    <p className="mt-2 text-sm text-white/70">
+                      {t("noTradingPairsDescription")}
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="h-full w-full bg-black" />
               )}

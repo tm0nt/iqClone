@@ -1,21 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useAsync } from "@/hooks/use-async";
+import { paymentsService } from "@/lib/services/payments.service";
+import type { AffiliatePayment } from "@/lib/types/account.types";
 
-export interface AffiliatePayment {
-  id: string;
-  tipo: string;
-  valor: number;
-  status: "concluido" | "pendente" | "cancelado";
-  metodo: string;
-  dataPedido?: string;
-}
+export type { AffiliatePayment };
 
 export function useAffiliatePaymentsTable(initialSearchQuery = "") {
-  const { toast } = useToast();
-  const [payments, setPayments] = useState<AffiliatePayment[]>([]);
-  const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [filteredStatus, setFilteredStatus] = useState("");
@@ -25,50 +17,21 @@ export function useAffiliatePaymentsTable(initialSearchQuery = "") {
     setSearchQuery(initialSearchQuery);
   }, [initialSearchQuery]);
 
-  const fetchPayments = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const params = new URLSearchParams({
+  const { data, loading } = useAsync(
+    () =>
+      paymentsService.list({
         searchQuery,
         startDate,
         endDate,
         status: filteredStatus,
-      });
+      }),
+    [searchQuery, startDate, endDate, filteredStatus],
+  );
 
-      const response = await fetch(`/api/account/withdraw?${params.toString()}`, {
-        cache: "no-store",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Erro ao buscar pagamentos.");
-      }
-
-      setPayments(data.withdrawals || []);
-    } catch (error) {
-      setPayments([]);
-      toast({
-        title: "Erro",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Não foi possível carregar os pagamentos.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [endDate, filteredStatus, searchQuery, startDate, toast]);
-
-  useEffect(() => {
-    void fetchPayments();
-  }, [fetchPayments]);
+  const payments = data ?? [];
 
   const filteredPayments = useMemo(() => {
     const normalizedSearch = searchQuery.toLowerCase();
-
     return payments.filter(
       (payment) =>
         payment.id.toLowerCase().includes(normalizedSearch) ||

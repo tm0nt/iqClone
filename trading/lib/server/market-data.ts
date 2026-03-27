@@ -59,6 +59,19 @@ type ResolvedProviderContext = Awaited<
 > & {
   provider: ProviderRecord;
 };
+type MarketDataCacheEntry<T> = {
+  value: T;
+  expiresAt: number;
+};
+type MarketDataCacheState = {
+  values: Map<string, MarketDataCacheEntry<unknown>>;
+  inflight: Map<string, Promise<unknown>>;
+};
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __MARKET_DATA_CACHE_STATE__: MarketDataCacheState | undefined;
+}
 
 export class MarketDataError extends Error {
   status: number;
@@ -72,6 +85,108 @@ export class MarketDataError extends Error {
 
 function normalizeSymbol(symbol: string) {
   return symbol.trim().toUpperCase();
+}
+
+const marketDataCacheState: MarketDataCacheState =
+  globalThis.__MARKET_DATA_CACHE_STATE__ ?? {
+    values: new Map(),
+    inflight: new Map(),
+  };
+
+if (!globalThis.__MARKET_DATA_CACHE_STATE__) {
+  globalThis.__MARKET_DATA_CACHE_STATE__ = marketDataCacheState;
+}
+
+function getCachedValue<T>(key: string): T | null {
+  const entry = marketDataCacheState.values.get(key);
+  if (!entry) return null;
+
+  if (entry.expiresAt <= Date.now()) {
+    marketDataCacheState.values.delete(key);
+    return null;
+  }
+
+  return entry.value as T;
+}
+
+function setCachedValue<T>(key: string, value: T, ttlMs: number) {
+  marketDataCacheState.values.set(key, {
+    value,
+    expiresAt: Date.now() + ttlMs,
+  });
+}
+
+async function withMarketDataCache<T>(
+  key: string,
+  ttlMs: number,
+  loader: () => Promise<T>,
+): Promise<T> {
+  const cached = getCachedValue<T>(key);
+  if (cached !== null) {
+    return cached;
+  }
+
+  const inflight = marketDataCacheState.inflight.get(key);
+  if (inflight) {
+    return inflight as Promise<T>;
+  }
+
+  const promise = loader()
+    .then((value) => {
+      if (ttlMs > 0) {
+        setCachedValue(key, value, ttlMs);
+      }
+      return value;
+    })
+    .finally(() => {
+      marketDataCacheState.inflight.delete(key);
+    });
+
+  marketDataCacheState.inflight.set(key, promise);
+  return promise;
+}
+
+function getPriceCacheTtlMs(source: string) {
+  switch (source) {
+    case "binance":
+      return 1_000;
+    case "itick":
+      return 5_000;
+    case "tiingo":
+      return 10_000;
+    default:
+      return 2_000;
+  }
+}
+
+function getCandlesCacheTtlMs(source: string, timeframe: string) {
+  if (timeframe === "1d" || timeframe === "1w") {
+    return source === "binance" ? 60_000 : 5 * 60_000;
+  }
+
+  switch (source) {
+    case "binance":
+      return 5_000;
+    case "itick":
+      return 15_000;
+    case "tiingo":
+      return 30_000;
+    default:
+      return 10_000;
+  }
+}
+
+function getSnapshotCacheTtlMs(source: string) {
+  switch (source) {
+    case "binance":
+      return 3_000;
+    case "itick":
+      return 10_000;
+    case "tiingo":
+      return 15_000;
+    default:
+      return 5_000;
+  }
 }
 
 function sanitizeToken(token?: string | null) {
@@ -211,7 +326,7 @@ async function getProviderBySlug(slug: string) {
 }
 
 export function getMarketSource(symbol: string): "binance" | "itick" | "tiingo" {
-  return isCryptoSymbol(symbol) ? "binance" : "itick";
+  return isCryptoSymbol(symbol) ? "binance" : "tiingo";
 }
 
 export async function fetchMarketPrice(symbol: string) {
@@ -222,20 +337,27 @@ export async function fetchMarketPrice(symbol: string) {
 export async function fetchMarketPriceBySource(source: string, symbol: string) {
   const provider = await getProviderBySlug(source);
   const normalized = normalizeSymbol(symbol);
+  const cacheKey = `price:${provider.slug}:${normalized}`;
 
-  switch (provider.slug) {
-    case "binance":
-      return fetchBinancePrice(provider, normalized);
-    case "itick":
-      return fetchItickPrice(provider, normalized);
-    case "tiingo":
-      return fetchTiingoPrice(provider, normalized);
-    default:
-      throw new MarketDataError(
-        `Provider ${provider.slug} is not implemented`,
-        501,
-      );
-  }
+  return withMarketDataCache(
+    cacheKey,
+    getPriceCacheTtlMs(provider.slug),
+    async () => {
+      switch (provider.slug) {
+        case "binance":
+          return fetchBinancePrice(provider, normalized);
+        case "itick":
+          return fetchItickPrice(provider, normalized);
+        case "tiingo":
+          return fetchTiingoPrice(provider, normalized);
+        default:
+          throw new MarketDataError(
+            `Provider ${provider.slug} is not implemented`,
+            501,
+          );
+      }
+    },
+  );
 }
 
 export async function fetchMarketCandles(
@@ -260,20 +382,28 @@ export async function fetchMarketCandlesBySource(
 ): Promise<CandleData[]> {
   const provider = await getProviderBySlug(source);
   const normalized = normalizeSymbol(symbol);
+  const clampedLimit = Math.min(Math.max(limit, 1), 1000);
+  const cacheKey = `candles:${provider.slug}:${normalized}:${timeframe}:${clampedLimit}`;
 
-  switch (provider.slug) {
-    case "binance":
-      return fetchBinanceCandles(provider, normalized, timeframe, limit);
-    case "itick":
-      return fetchItickCandles(provider, normalized, timeframe, limit);
-    case "tiingo":
-      return fetchTiingoCandles(provider, normalized, timeframe, limit);
-    default:
-      throw new MarketDataError(
-        `Provider ${provider.slug} is not implemented`,
-        501,
-      );
-  }
+  return withMarketDataCache(
+    cacheKey,
+    getCandlesCacheTtlMs(provider.slug, timeframe),
+    async () => {
+      switch (provider.slug) {
+        case "binance":
+          return fetchBinanceCandles(provider, normalized, timeframe, clampedLimit);
+        case "itick":
+          return fetchItickCandles(provider, normalized, timeframe, clampedLimit);
+        case "tiingo":
+          return fetchTiingoCandles(provider, normalized, timeframe, clampedLimit);
+        default:
+          throw new MarketDataError(
+            `Provider ${provider.slug} is not implemented`,
+            501,
+          );
+      }
+    },
+  );
 }
 
 export async function fetchMarketSnapshot(symbol: string) {
@@ -287,20 +417,27 @@ export async function fetchMarketSnapshotBySource(
 ) {
   const provider = await getProviderBySlug(source);
   const normalized = normalizeSymbol(symbol);
+  const cacheKey = `snapshot:${provider.slug}:${normalized}`;
 
-  switch (provider.slug) {
-    case "binance":
-      return fetchBinanceSnapshot(provider, normalized);
-    case "itick":
-      return fetchItickSnapshot(provider, normalized);
-    case "tiingo":
-      return fetchTiingoSnapshot(provider, normalized);
-    default:
-      throw new MarketDataError(
-        `Provider ${provider.slug} is not implemented`,
-        501,
-      );
-  }
+  return withMarketDataCache(
+    cacheKey,
+    getSnapshotCacheTtlMs(provider.slug),
+    async () => {
+      switch (provider.slug) {
+        case "binance":
+          return fetchBinanceSnapshot(provider, normalized);
+        case "itick":
+          return fetchItickSnapshot(provider, normalized);
+        case "tiingo":
+          return fetchTiingoSnapshot(provider, normalized);
+        default:
+          throw new MarketDataError(
+            `Provider ${provider.slug} is not implemented`,
+            501,
+          );
+      }
+    },
+  );
 }
 
 async function fetchBinancePrice(provider: ProviderRecord, symbol: string) {

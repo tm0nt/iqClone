@@ -61,20 +61,20 @@ const defaultMarketProviders: MarketProviderSeed[] = [
     authQueryParam: "token",
     envKey: null,
     isActive: true,
-    sortOrder: 2,
+    sortOrder: 3,
   },
   {
     slug: "tiingo",
     name: "TIINGO",
-    type: "crypto",
+    type: "forex",
     restBaseUrl: "https://api.tiingo.com",
-    wsBaseUrl: "wss://api.tiingo.com/crypto",
+    wsBaseUrl: "wss://api.tiingo.com/fx",
     authType: "header",
     authHeaderName: "Authorization",
     authQueryParam: "token",
     envKey: "TIINGO_API_KEY",
     isActive: true,
-    sortOrder: 3,
+    sortOrder: 2,
   },
 ];
 
@@ -106,7 +106,27 @@ function providerSlugForPair(pair: {
 }) {
   const raw = pair.provider?.trim().toLowerCase();
   if (raw) return raw;
-  return pair.type === "crypto" ? "binance" : "itick";
+  return pair.type === "crypto" ? "binance" : "tiingo";
+}
+
+function buildDefaultRegistryPairs() {
+  const tiingoForexPairs = defaultTradingPairs
+    .filter((pair) => pair.type === "forex")
+    .map((pair) => ({
+      ...pair,
+      provider: "TIINGO",
+      exchange: "TIINGO",
+    }));
+
+  return [...defaultTradingPairs, ...tiingoForexPairs];
+}
+
+function getTradingPairPriority(pair: TradingPairRecord) {
+  const providerSortOrder = pair.marketProvider?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+  const providerActivePenalty = pair.marketProvider?.isActive === false ? 1000 : 0;
+  const pairActivePenalty = pair.isActive === false ? 1000 : 0;
+
+  return providerActivePenalty + pairActivePenalty + providerSortOrder;
 }
 
 async function loadMarketProviders() {
@@ -129,49 +149,74 @@ export function invalidateMarketRegistryCaches() {
 }
 
 async function bootstrapMarketRegistry() {
-  // Always ensure all default providers exist (creates missing ones)
-  await prisma.marketDataProvider.createMany({
-    data: defaultMarketProviders,
-    skipDuplicates: true,
-  });
+  for (const provider of defaultMarketProviders) {
+    await prisma.marketDataProvider.upsert({
+      where: { slug: provider.slug },
+      update: {
+        name: provider.name,
+        type: provider.type,
+        restBaseUrl: provider.restBaseUrl,
+        wsBaseUrl: provider.wsBaseUrl,
+        authType: provider.authType,
+        authHeaderName: provider.authHeaderName,
+        authQueryParam: provider.authQueryParam,
+        envKey: provider.envKey,
+        isActive: provider.isActive,
+        sortOrder: provider.sortOrder,
+      },
+      create: provider,
+    });
+  }
 
-  const pairsCount = await prisma.tradingPair.count();
-  if (pairsCount === 0) {
-    const providers = await loadMarketProviders();
-    const providersBySlug = new Map(
-      providers.map((provider) => [provider.slug.toLowerCase(), provider]),
-    );
-    const pairsToCreate: Prisma.TradingPairCreateManyInput[] = [];
+  const providers = await loadMarketProviders();
+  const providersBySlug = new Map(
+    providers.map((provider) => [provider.slug.toLowerCase(), provider]),
+  );
+  const seedPairs = buildDefaultRegistryPairs();
 
-    for (const [index, pair] of defaultTradingPairs.entries()) {
-      const providerSlug = providerSlugForPair({
-        provider: pair.provider,
-        type: pair.type,
-      });
-      const provider = providersBySlug.get(providerSlug);
-      if (!provider) continue;
+  for (const [index, pair] of seedPairs.entries()) {
+    const providerSlug = providerSlugForPair({
+      provider: pair.provider,
+      type: pair.type,
+    });
+    const provider = providersBySlug.get(providerSlug);
+    if (!provider) continue;
 
-      pairsToCreate.push({
+    const existingPair = await prisma.tradingPair.findFirst({
+      where: {
         symbol: pair.symbol.toUpperCase(),
-        name: pair.name,
-        type: pair.type,
-        provider: provider.name,
         providerId: provider.id,
-        priceSource: provider.slug,
-        payoutRate: pair.payoutRate ?? 0.9,
-        isActive: pair.isActive ?? true,
-        favorite: pair.favorite ?? false,
-        displayOrder: pair.displayOrder ?? index,
-        imageUrl: pair.image,
-        color: pair.color,
-        logo: pair.logo,
-        description: pair.description ?? null,
+      },
+      select: { id: true },
+    });
+
+    const data = {
+      symbol: pair.symbol.toUpperCase(),
+      name: pair.name,
+      type: pair.type,
+      provider: provider.name,
+      providerId: provider.id,
+      priceSource: provider.slug,
+      payoutRate: pair.payoutRate ?? 0.9,
+      isActive: pair.isActive ?? true,
+      favorite: pair.favorite ?? false,
+      displayOrder: pair.displayOrder ?? index,
+      imageUrl: pair.image,
+      color: pair.color,
+      logo: pair.logo,
+      description: pair.description ?? null,
+    } satisfies Prisma.TradingPairUncheckedCreateInput;
+
+    if (existingPair) {
+      await prisma.tradingPair.update({
+        where: { id: existingPair.id },
+        data,
       });
+      continue;
     }
 
-    await prisma.tradingPair.createMany({
-      data: pairsToCreate,
-      skipDuplicates: true,
+    await prisma.tradingPair.create({
+      data,
     });
   }
 
@@ -234,9 +279,16 @@ export async function getTradingPairsMap() {
     registryState.tradingPairsPromise = (async () => {
       await ensureDefaultTradingPairs();
       const pairs = await loadTradingPairs();
-      const map = new Map(
-        pairs.map((pair) => [pair.symbol.toUpperCase(), pair]),
-      );
+      const map = new Map<string, TradingPairRecord>();
+
+      for (const pair of pairs) {
+        const symbol = pair.symbol.toUpperCase();
+        const existing = map.get(symbol);
+
+        if (!existing || getTradingPairPriority(pair) < getTradingPairPriority(existing)) {
+          map.set(symbol, pair);
+        }
+      }
 
       registryState.tradingPairsCache = {
         value: map,
@@ -287,7 +339,7 @@ export async function resolveMarketSourceForSymbol(symbol: string) {
   }
 
   const fallbackProvider = providers.get(
-    isCryptoSymbol(normalized) ? "binance" : "itick",
+    isCryptoSymbol(normalized) ? "binance" : "tiingo",
   );
 
   return {

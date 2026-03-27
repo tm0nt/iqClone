@@ -1,13 +1,13 @@
 "use client";
 
 import { ChevronDown, Search, Star, X, Plus } from "lucide-react";
-import Image from "next/image";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { debounce } from "lodash";
 import { Crypto } from "@/lib/forex-data";
 import { priceProvider } from "@/lib/price-provider";
 import { useTranslations } from "next-intl";
 import { useTickSound } from "@/hooks/use-tick-sound";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface CryptoSelectorProps {
   cryptos: Crypto[];
@@ -22,6 +22,35 @@ interface CryptoSelectorProps {
   onRemoveChart?: (symbol: string) => void;
   assetBrowserMode?: "modal" | "sidebar";
   onOpenAssetBrowser?: () => void;
+}
+
+function TradingPairIcon({
+  image,
+  name,
+  fallback,
+  className,
+}: {
+  image?: string;
+  name: string;
+  fallback: string;
+  className?: string;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  if (!imageFailed && image) {
+    return (
+      <img
+        src={image}
+        alt={name}
+        className={className ?? "h-full w-full object-contain"}
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <span className="text-xs font-semibold text-platform-text">{fallback}</span>
+  );
 }
 
 export function CryptoSelector({
@@ -39,6 +68,7 @@ export function CryptoSelector({
   onOpenAssetBrowser,
 }: CryptoSelectorProps) {
   const t = useTranslations("CryptoSelector");
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterFavorites, setFilterFavorites] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -70,6 +100,7 @@ export function CryptoSelector({
       }),
     [localCryptos, searchTerm, filterFavorites],
   );
+  const shouldUseSidebarAssetBrowser = assetBrowserMode === "sidebar" && !isMobile;
 
   const changeCrypto = useCallback(
     debounce((crypto: Crypto) => {
@@ -204,13 +235,11 @@ export function CryptoSelector({
                   }}
                 >
                   <div className="w-10 h-10 rounded-md items-center justify-center overflow-hidden p-1 shadow-sm flex mr-2">
-                    <Image
-                      src={crypto.image}
-                      alt={crypto.name}
-                      width={32}
-                      height={32}
-                      className="object-contain"
-                      priority
+                    <TradingPairIcon
+                      image={crypto.image}
+                      name={crypto.name}
+                      fallback={crypto.logo || crypto.symbol.slice(0, 3)}
+                      className="h-8 w-8 object-contain"
                     />
                   </div>
                   <div className="min-w-0 flex flex-1 flex-col items-start">
@@ -243,14 +272,16 @@ export function CryptoSelector({
             setIsDropdownOpen(!isDropdownOpen);
           }}
         >
-          <div className="w- h-12 rounded-md items-center justify-center overflow-hidden p-1 shadow-sm flex mr-2">
-            <Image
-              src={selectedCrypto?.image || "/placeholder.svg?width=20&height=20&query=crypto+logo"}
-              alt={selectedCrypto?.name || t("placeholderAlt")}
-              width={64}
-              height={64}
-              className="object-contain"
-              priority
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md p-1 shadow-sm mr-2">
+            <TradingPairIcon
+              image={selectedCrypto?.image}
+              name={selectedCrypto?.name || t("placeholderAlt")}
+              fallback={
+                selectedCrypto?.logo ||
+                selectedCrypto?.symbol?.slice(0, 3) ||
+                "..."
+              }
+              className="h-10 w-10 object-contain"
             />
           </div>
           <div className="flex flex-col items-start flex-1">
@@ -272,7 +303,7 @@ export function CryptoSelector({
           className="flex items-center justify-center w-8 h-8 bg-platform-overlay-card rounded-xl hover:bg-platform-overlay-hover transition-colors"
           onClick={() => {
             playTick();
-            if (assetBrowserMode === "sidebar") {
+            if (shouldUseSidebarAssetBrowser) {
               onOpenAssetBrowser?.();
               return;
             }

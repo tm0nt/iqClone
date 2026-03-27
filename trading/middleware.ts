@@ -1,11 +1,9 @@
-import NextAuth from "next-auth";
 import { NextResponse, type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
-import authConfig, { publicAuthPages } from "@/auth.config";
+import { publicAuthPages } from "@/auth.config";
 import { routing } from "./i18n/routing";
 
 const handleI18nRouting = createMiddleware(routing);
-const { auth } = NextAuth(authConfig);
 const authCookieNames = [
   "authjs.session-token",
   "__Secure-authjs.session-token",
@@ -41,7 +39,7 @@ function stripLocalePrefix(pathname: string) {
   return { locale: routing.defaultLocale, pathNoLocale: pathname };
 }
 
-export default auth((req) => {
+export default function middleware(req: NextRequest) {
   const i18nRes = handleI18nRouting(req);
 
   if (
@@ -53,13 +51,13 @@ export default auth((req) => {
 
   const { pathname, search } = req.nextUrl;
   const { locale, pathNoLocale } = stripLocalePrefix(pathname);
-  const hasValidSession = Boolean(req.auth?.user?.id);
+  const hasSessionCookie = hasAuthCookies(req);
 
   const isAuth = pathNoLocale === "/auth" || pathNoLocale.startsWith("/auth/");
   const isRoot = pathNoLocale === "/";
   const withLocale = (path: string) => `/${locale}${path}`;
 
-  if (hasValidSession && (isAuth || isRoot)) {
+  if (hasSessionCookie && (isAuth || isRoot)) {
     const url = req.nextUrl.clone();
     url.pathname = withLocale("/trading");
     url.search = "";
@@ -70,7 +68,7 @@ export default auth((req) => {
     (page) => pathNoLocale === page || pathNoLocale.startsWith(`${page}/`),
   );
 
-  if (!hasValidSession && !isPublicUI) {
+  if (!hasSessionCookie && !isPublicUI) {
     const url = req.nextUrl.clone();
     url.pathname = withLocale("/auth");
 
@@ -90,12 +88,8 @@ export default auth((req) => {
     return response;
   }
 
-  if (!hasValidSession && hasAuthCookies(req)) {
-    clearAuthCookies(i18nRes);
-  }
-
   return i18nRes;
-});
+}
 
 export const config = {
   matcher: "/((?!api|trpc|_next|_vercel|.*\\..*).*)",

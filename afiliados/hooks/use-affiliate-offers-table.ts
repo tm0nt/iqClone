@@ -1,79 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAsync } from "@/hooks/use-async";
+import { offersService } from "@/lib/services/offers.service";
+import type { AffiliateOfferRow } from "@/lib/types/account.types";
 
-export interface AffiliateOfferRow {
-  id: string;
-  name: string;
-  status: "active" | "inactive" | "pending";
-  category: string;
-  tipoComissao: string | null;
-  cpaMin?: number;
-  cpaValor?: number;
-  revShareFalsoValue?: number;
-  revShareValue?: number;
-  cliques: number;
-  offerLink: string;
-}
-
-interface OfferApiPayload {
-  tipoComissao: string | null;
-  cpaMin?: number;
-  cpaValor?: number;
-  revShareFalsoValue?: number;
-  revShareValue?: number;
-  cliques: number;
-  offerLink: string;
-}
+export type { AffiliateOfferRow };
 
 export function useAffiliateOffersTable(searchQuery = "", refreshKey = false) {
-  const [offers, setOffers] = useState<AffiliateOfferRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedOffers, setSelectedOffers] = useState<string[]>([]);
-  const [tipoComissao, setTipoComissao] = useState<string | null>(null);
 
-  const fetchOffers = useCallback(async () => {
-    setLoading(true);
+  const { data, loading } = useAsync(
+    () => offersService.list(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [refreshKey],
+  );
 
-    try {
-      const response = await fetch("/api/account/offer/list", { cache: "no-store" });
-      const data: OfferApiPayload = await response.json();
-
-      if (response.ok) {
-        const nextOffers: AffiliateOfferRow[] = [
-          {
-            id: "1",
-            name: data.tipoComissao ?? "Nenhuma",
-            status: "active",
-            category: "Indicação",
-            tipoComissao: data.tipoComissao,
-            cpaMin: data.cpaMin,
-            cpaValor: data.cpaValor,
-            revShareFalsoValue: data.revShareFalsoValue,
-            revShareValue: data.revShareValue,
-            cliques: data.cliques,
-            offerLink: data.offerLink,
-          },
-        ];
-
-        setOffers(nextOffers);
-        setTipoComissao(data.tipoComissao);
-      }
-    } catch {
-      setOffers([]);
-      setTipoComissao(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchOffers();
-  }, [fetchOffers, refreshKey]);
+  const offers = data?.offers ?? [];
+  const tipoComissao = data?.tipoComissao ?? null;
 
   const filteredOffers = useMemo(() => {
     const normalizedSearch = searchQuery.toLowerCase();
-
     return offers.filter(
       (offer) =>
         offer.name.toLowerCase().includes(normalizedSearch) ||
@@ -86,17 +33,15 @@ export function useAffiliateOffersTable(searchQuery = "", refreshKey = false) {
       setSelectedOffers([]);
       return;
     }
-
     setSelectedOffers(filteredOffers.map((offer) => offer.id));
   };
 
   const toggleSelectOffer = (offerId: string) => {
-    if (selectedOffers.includes(offerId)) {
-      setSelectedOffers(selectedOffers.filter((id) => id !== offerId));
-      return;
-    }
-
-    setSelectedOffers([...selectedOffers, offerId]);
+    setSelectedOffers((prev) =>
+      prev.includes(offerId)
+        ? prev.filter((id) => id !== offerId)
+        : [...prev, offerId],
+    );
   };
 
   const copyToClipboard = async (text: string) => {

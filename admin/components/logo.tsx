@@ -5,9 +5,11 @@ import { resolveLogoForBackground } from '@shared/platform/branding'
 
 export function Logo({
   width = 180,
+  background = 'auto',
   onDataLoaded,
 }: {
   width?: number
+  background?: 'auto' | 'light' | 'dark'
   onDataLoaded?: (data: { logoUrl: string; name: string }) => void
 }) {
   const [logoUrl, setLogoUrl] = useState('/nextbrokers.png')
@@ -19,12 +21,21 @@ export function Logo({
     try {
       const response = await fetch('/api/admin/logo', { cache: 'no-store' })
       const data = await response.json()
-      const logo = resolveLogoForBackground({
-        backgroundColor: data.backgroundColor,
-        logoDark: data.logoDark || data.logo,
-        logoWhite: data.logoWhite || data.logo,
-        fallback: '/nextbrokers.png',
-      })
+      const logoDark = data.logoDark || data.logo
+      const logoWhite = data.logoWhite || data.logo
+      let logo: string
+      if (background === 'light') {
+        logo = logoDark || logoWhite || '/nextbrokers.png'
+      } else if (background === 'dark') {
+        logo = logoWhite || logoDark || '/nextbrokers.png'
+      } else {
+        logo = resolveLogoForBackground({
+          backgroundColor: data.backgroundColor,
+          logoDark,
+          logoWhite,
+          fallback: '/nextbrokers.png',
+        })
+      }
       const name = data.nome || 'Empresa'
       setLogoUrl(logo)
       setCompanyName(name)

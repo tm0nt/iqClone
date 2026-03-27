@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 export interface AdminAffiliateRow {
   id: string;
@@ -14,6 +14,7 @@ export interface AdminAffiliateRow {
   avatar?: string;
 }
 
+// TODO: substituir por endpoint real quando disponível
 const MOCK_AFFILIATES: AdminAffiliateRow[] = [
   {
     id: "1",
@@ -51,45 +52,32 @@ const MOCK_AFFILIATES: AdminAffiliateRow[] = [
 ];
 
 export function useAdminAffiliatesTable(searchQuery = "") {
-  const [affiliates, setAffiliates] = useState<AdminAffiliateRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading] = useState(false);
   const [selectedAffiliates, setSelectedAffiliates] = useState<string[]>([]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setAffiliates(MOCK_AFFILIATES);
-      setLoading(false);
-    }, 1000);
-
-    return () => window.clearTimeout(timer);
-  }, []);
 
   const filteredAffiliates = useMemo(() => {
     const normalizedSearch = searchQuery.toLowerCase();
-
-    return affiliates.filter(
+    return MOCK_AFFILIATES.filter(
       (affiliate) =>
         affiliate.name.toLowerCase().includes(normalizedSearch) ||
         affiliate.email.toLowerCase().includes(normalizedSearch),
     );
-  }, [affiliates, searchQuery]);
+  }, [searchQuery]);
 
   const toggleSelectAll = () => {
     if (selectedAffiliates.length === filteredAffiliates.length) {
       setSelectedAffiliates([]);
       return;
     }
-
     setSelectedAffiliates(filteredAffiliates.map((affiliate) => affiliate.id));
   };
 
   const toggleSelectAffiliate = (affiliateId: string) => {
-    if (selectedAffiliates.includes(affiliateId)) {
-      setSelectedAffiliates(selectedAffiliates.filter((id) => id !== affiliateId));
-      return;
-    }
-
-    setSelectedAffiliates([...selectedAffiliates, affiliateId]);
+    setSelectedAffiliates((prev) =>
+      prev.includes(affiliateId)
+        ? prev.filter((id) => id !== affiliateId)
+        : [...prev, affiliateId],
+    );
   };
 
   return {

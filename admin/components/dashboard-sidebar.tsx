@@ -64,7 +64,7 @@ export function DashboardSidebar() {
         {/* Header */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-border/30 px-4">
           <Link href="/dashboard" className="flex items-center">
-            <Logo width={120} />
+            <Logo width={120} background="light" />
           </Link>
           <Button
             variant="ghost"
@@ -102,7 +102,7 @@ export function DashboardSidebar() {
         >
           {!collapsed && (
             <Link href="/dashboard" className="flex items-center">
-              <Logo width={120} />
+              <Logo width={120} background="light" />
             </Link>
           )}
           <Button

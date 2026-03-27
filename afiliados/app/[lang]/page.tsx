@@ -48,7 +48,7 @@ export default function Home() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center space-y-4 text-center">
-          <Logo onDataLoaded={handleDataLoaded} />
+          <Logo onDataLoaded={handleDataLoaded} background="light" />
           <span className="inline-flex items-center px-3 py-1 text-xs font-medium text-primary-foreground bg-primary rounded-full">
             PROGRAMA DE AFILIADOS
           </span>
@@ -58,7 +58,7 @@ export default function Home() {
 
         <div className="mt-8 flex flex-col items-center space-y-4">
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <DropdownMenuTrigger className="flex items-center gap-1 text-sm text-black transition-colors hover:text-black/70">
               <Globe className="h-4 w-4" />
               {currentLanguage.label}
               <ChevronDown className="h-3 w-3" />
@@ -76,16 +76,16 @@ export default function Home() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="flex space-x-4 text-xs text-muted-foreground">
-            <Link href="#" className="hover:text-foreground transition-colors">
+          <div className="flex space-x-4 text-xs text-black">
+            <Link href="#" className="transition-colors hover:text-black/70">
               Termos e Condições
             </Link>
-            <Link href="#" className="hover:text-foreground transition-colors">
+            <Link href="#" className="transition-colors hover:text-black/70">
               Política de Privacidade
             </Link>
           </div>
 
-          <div className="text-xs text-muted-foreground/60">
+          <div className="text-xs text-black">
             <p>
               {email} © {empresaData.nome}, 2025
             </p>

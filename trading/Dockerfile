@@ -13,6 +13,9 @@ WORKDIR /app
 
 RUN npm install -g pnpm
 
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 

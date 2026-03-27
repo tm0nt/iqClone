@@ -48,8 +48,8 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="animate-fade-in-up">
-          <h2 className="text-3xl font-bold tracking-tight">Painel de Controle</h2>
-          <p className="text-muted-foreground">Visão geral das suas análises e desempenho</p>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Painel de Controle</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Visão geral das suas análises e desempenho</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 animate-fade-in-up animation-delay-100">
           <DateRangePicker
@@ -69,24 +69,24 @@ export default function DashboardPage() {
         {/* Receita Total */}
         <Card
           className={cn(
-            "overflow-hidden border-none bg-gradient-to-br from-primary/90 to-primary/80 shadow-md transition-all duration-500 hover:shadow-xl",
+            "group border border-border/60 shadow-sm transition-all hover:shadow-md hover:-translate-y-px",
             mounted ? "animate-fade-in-up" : "opacity-0",
           )}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-primary-foreground">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
-            <div className="rounded-full bg-primary-foreground/20 p-2">
+            <div className="rounded-full bg-emerald-50 p-2 text-emerald-600 transition-transform duration-300 group-hover:scale-110">
               <DollarSign className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent className="text-primary-foreground">
-            <div className="text-2xl font-bold">
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">
               {data ? formatUsd(data.receitaTotal) : "Carregando..."}
             </div>
-            <div className="flex items-center text-xs">
+            <div className="flex items-center text-xs text-muted-foreground">
               <Badge
                 variant="outline"
-                className="border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground"
+                className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
               >
                 +{data?.usuariosAtivos?.crescimento ?? 0}%
               </Badge>
@@ -98,7 +98,7 @@ export default function DashboardPage() {
         {/* Usuários Ativos */}
         <Card
           className={cn(
-            "group border-none shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+            "group border border-border/60 shadow-sm transition-all hover:shadow-md hover:-translate-y-px",
             mounted ? "animate-fade-in-up animation-delay-100" : "opacity-0",
           )}
         >
@@ -124,7 +124,7 @@ export default function DashboardPage() {
         {/* Conversões */}
         <Card
           className={cn(
-            "group border-none shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+            "group border border-border/60 shadow-sm transition-all hover:shadow-md hover:-translate-y-px",
             mounted ? "animate-fade-in-up animation-delay-200" : "opacity-0",
           )}
         >
@@ -150,7 +150,7 @@ export default function DashboardPage() {
         {/* Saldo disponível */}
         <Card
           className={cn(
-            "group border-none shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+            "group border border-border/60 shadow-sm transition-all hover:shadow-md hover:-translate-y-px",
             mounted ? "animate-fade-in-up animation-delay-300" : "opacity-0",
           )}
         >
@@ -161,24 +161,24 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-foreground">
               {data ? formatUsd(data.saldoDisponivel) : "Carregando..."}
             </div>
           </CardContent>
         </Card>
       </div>
 
-          <div className="grid gap-4 md:grid-cols-1">
-            <Card className="col-span-4 border-none shadow-md">
-              <CardHeader>
-                <CardTitle>Visão Geral</CardTitle>
-                <CardDescription>Receita mensal e aquisição de usuários</CardDescription>
-              </CardHeader>
-              <CardContent className="pl-2">
-                <Overview />
-              </CardContent>
-            </Card>
-          </div>
+      <div className="grid gap-4 md:grid-cols-1">
+        <Card className="col-span-4 border border-border/60 shadow-sm">
+          <CardHeader>
+            <CardTitle>Visão Geral</CardTitle>
+            <CardDescription>Receita mensal e aquisição de usuários</CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <Overview />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

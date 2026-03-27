@@ -1,16 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useAsync } from "@/hooks/use-async";
+import { accountService } from "@/lib/services/account.service";
+import type { AffiliateDashboardMetricsData } from "@/lib/types/account.types";
 
-export interface AffiliateDashboardMetricsData {
-  receitaTotal: number;
-  usuariosAtivos: {
-    totalUsuarios: number;
-    crescimento: number;
-  };
-  conversoes: number;
-  saldoDisponivel: number;
-}
+export type { AffiliateDashboardMetricsData };
 
 interface AffiliateDashboardDateRange {
   from: Date;
@@ -20,51 +14,14 @@ interface AffiliateDashboardDateRange {
 export function useAffiliateDashboardMetrics(
   dateRange: AffiliateDashboardDateRange,
 ) {
-  const [data, setData] = useState<AffiliateDashboardMetricsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error, refetch } = useAsync(
+    () =>
+      accountService.getDashboardMetrics(
+        dateRange.from.toISOString(),
+        dateRange.to.toISOString(),
+      ),
+    [dateRange.from, dateRange.to],
+  );
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const params = new URLSearchParams({
-        startDate: dateRange.from.toISOString(),
-        endDate: dateRange.to.toISOString(),
-      });
-
-      const res = await fetch(`/api/account/general?${params.toString()}`, {
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(payload?.error || "Erro ao buscar métricas.");
-      }
-
-      const json = await res.json();
-      setData(json);
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Erro ao buscar métricas.",
-      );
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [dateRange.from, dateRange.to]);
-
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
-
-  return {
-    data,
-    loading,
-    error,
-    refetch: fetchData,
-  };
+  return { data, loading, error, refetch };
 }

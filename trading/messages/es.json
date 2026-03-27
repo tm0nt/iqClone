@@ -637,7 +637,9 @@
     "sellAll": "Vender todas ({count})",
     "modalInvested": "Inversión",
     "modalExpectedProfit": "Ganancia esperada",
-    "modalSellPnL": "Ganancia tras vender (P/L)"
+    "modalSellPnL": "Ganancia tras vender (P/L)",
+    "noTradingPairs": "No hay paridades configuradas",
+    "noTradingPairsDescription": "No hay paridades activas disponibles en este momento."
   },
     "Loading": {
     "connecting": "Conectando...",

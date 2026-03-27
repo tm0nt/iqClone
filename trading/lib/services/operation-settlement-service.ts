@@ -124,7 +124,7 @@ export async function runSettlementBatch(): Promise<SettlementBatchResult> {
         operation.providerSlug ||
         operation.pair?.marketProvider?.slug ||
         operation.pair?.priceSource ||
-        "itick";
+        "tiingo";
       const marketSymbol =
         operation.marketSymbol ||
         operation.pair?.priceSymbol ||

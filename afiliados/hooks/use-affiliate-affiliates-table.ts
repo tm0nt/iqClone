@@ -1,19 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAsync } from "@/hooks/use-async";
+import type { AffiliateAffiliateRow } from "@/lib/types/account.types";
 
-export interface AffiliateAffiliateRow {
-  id: string;
-  name: string;
-  email: string;
-  status: "active" | "inactive" | "pending";
-  joinDate: string;
-  conversions: number;
-  earnings: number;
-  commissionRate: number;
-  avatar?: string;
-}
+export type { AffiliateAffiliateRow };
 
+// TODO: substituir por endpoint real quando disponível
 const MOCK_AFFILIATES: AffiliateAffiliateRow[] = [
   {
     id: "1",
@@ -73,22 +66,17 @@ const MOCK_AFFILIATES: AffiliateAffiliateRow[] = [
 ];
 
 export function useAffiliateAffiliatesTable(searchQuery = "") {
-  const [affiliates, setAffiliates] = useState<AffiliateAffiliateRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedAffiliates, setSelectedAffiliates] = useState<string[]>([]);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setAffiliates(MOCK_AFFILIATES);
-      setLoading(false);
-    }, 1000);
+  const { data, loading } = useAsync(
+    () => Promise.resolve(MOCK_AFFILIATES),
+    [],
+  );
 
-    return () => window.clearTimeout(timer);
-  }, []);
+  const affiliates = data ?? [];
 
   const filteredAffiliates = useMemo(() => {
     const normalizedSearch = searchQuery.toLowerCase();
-
     return affiliates.filter(
       (affiliate) =>
         affiliate.name.toLowerCase().includes(normalizedSearch) ||
@@ -101,17 +89,15 @@ export function useAffiliateAffiliatesTable(searchQuery = "") {
       setSelectedAffiliates([]);
       return;
     }
-
     setSelectedAffiliates(filteredAffiliates.map((affiliate) => affiliate.id));
   };
 
   const toggleSelectAffiliate = (affiliateId: string) => {
-    if (selectedAffiliates.includes(affiliateId)) {
-      setSelectedAffiliates(selectedAffiliates.filter((id) => id !== affiliateId));
-      return;
-    }
-
-    setSelectedAffiliates([...selectedAffiliates, affiliateId]);
+    setSelectedAffiliates((prev) =>
+      prev.includes(affiliateId)
+        ? prev.filter((id) => id !== affiliateId)
+        : [...prev, affiliateId],
+    );
   };
 
   return {

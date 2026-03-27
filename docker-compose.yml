@@ -36,6 +36,8 @@ services:
     build:
       context: .
       dockerfile: trading/Dockerfile
+      args:
+        DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public"
     container_name: muniz-trading
     restart: unless-stopped
     depends_on:
@@ -45,6 +47,9 @@ services:
       DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public"
       NODE_ENV: production
       AUTH_TRUST_HOST: "true"
+      AUTH_URL: "https://${TRADING_DOMAIN}"
+      NEXTAUTH_URL: "https://${TRADING_DOMAIN}"
+      NEXTAUTH_URL_INTERNAL: "http://trading:3000"
       SITE_DOMAIN: ${SITE_DOMAIN}
       SITE_NAME: ${SITE_NAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}

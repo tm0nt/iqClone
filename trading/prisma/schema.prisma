@@ -199,7 +199,7 @@ model VerificationToken {
 
 model TradingPair {
   id             String              @id @default(uuid())
-  symbol         String              @unique
+  symbol         String
   name           String
   type           TradingPairType
   provider       String
@@ -224,6 +224,7 @@ model TradingPair {
   @@index([type, isActive, displayOrder])
   @@index([priceSource])
   @@index([providerId, isActive, displayOrder])
+  @@unique([symbol, providerId])
 }
 
 model MarketDataProvider {

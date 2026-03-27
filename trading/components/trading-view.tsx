@@ -173,6 +173,7 @@ export function StockChart({
   // States
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [emptyStateMessage, setEmptyStateMessage] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<DropdownType>(null);
   const [chartType, setChartType] = useState<ChartType>("candlestick");
   const [timeframe, setTimeframe] = useState<string>("1m");
@@ -200,6 +201,16 @@ export function StockChart({
   const isInitialLoadRef = useRef(true);
   const candlesMapRef = useRef<Map<string, CandleData[]>>(new Map());
   const updateChartDataRef = useRef<(() => Promise<unknown>) | null>(null);
+
+  const isMarketUnavailableError = useCallback((message: string) => {
+    const normalized = message.toLowerCase();
+    return (
+      normalized.includes("market provider") &&
+      normalized.includes("disabled")
+    ) ||
+      normalized.includes("no market provider configured") ||
+      normalized.includes("trading pair") && normalized.includes("disabled");
+  }, []);
 
   useEffect(() => {
     currentPriceRef.current = currentPrice;
@@ -985,6 +996,8 @@ export function StockChart({
         } catch {}
       };
 
+      setError(null);
+      setEmptyStateMessage(null);
       setLoading(false);
     } catch (err: unknown) {
       const errorMessage =
@@ -993,10 +1006,18 @@ export function StockChart({
       if (errorMessage.includes("EventDispatcher is disposed")) {
         return;
       }
-      setError(`Load failed: ${errorMessage}`);
+
+      if (isMarketUnavailableError(errorMessage)) {
+        setError(null);
+        setEmptyStateMessage(t("noTradingPairs"));
+      } else {
+        setEmptyStateMessage(null);
+        setError(`Load failed: ${errorMessage}`);
+      }
       setLoading(false);
     }
   }, [
+    isMarketUnavailableError,
     saveDrawingsForPair,
     tradingPair,
     timeframe,
@@ -1005,6 +1026,7 @@ export function StockChart({
     updateLiveDataFromQuote,
     fitYAxisToVisibleData,
     syncMarkerSeries,
+    t,
     updateTradeHoverVisuals,
   ]);
 
@@ -2089,6 +2111,17 @@ export function StockChart({
       </div>
 
       {loading && <TradingChartLoader />}
+
+      {emptyStateMessage && !loading && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 px-6">
+          <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 px-6 py-8 text-center text-white backdrop-blur-sm">
+            <h2 className="text-xl font-semibold">{emptyStateMessage}</h2>
+            <p className="mt-2 text-sm text-white/70">
+              {t("noTradingPairsDescription")}
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">

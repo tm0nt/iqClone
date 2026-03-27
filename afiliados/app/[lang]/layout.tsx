@@ -2,7 +2,6 @@ import type React from "react"
 import { Inter } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
-import { DynamicThemeProvider } from "@/components/dynamic-theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
 import "../globals.css"
 
@@ -38,12 +37,10 @@ export default function LangLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <DynamicThemeProvider>
-            <AuthProvider>
-              {children}
-              <Toaster />
-            </AuthProvider>
-          </DynamicThemeProvider>
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

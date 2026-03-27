@@ -1,67 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { useAsync } from "@/hooks/use-async";
+import { dashboardService } from "@/lib/services/dashboard.service";
+import type {
+  AdminDashboardMetrics,
+  AdminGeneralDashboardData,
+} from "@/lib/types/dashboard.types";
 
-export interface AdminGeneralDashboardData {
-  totalDepositoValor: number;
-  totalSaquesComTaxa: number;
-  crescimentoClientes: number;
-  saquesPendentesCount: number;
-  totalSaquesPendentes: number;
-  totalClientes: number;
-}
-
-export interface AdminDashboardMetrics {
-  totalDeposits: number;
-  totalWithdrawals: number;
-  netRevenue: number;
-  clientGrowth: number;
-  pendingCount: number;
-  pendingValue: number;
-  totalClients: number;
-  conversionRate: number | null;
-}
+export type { AdminDashboardMetrics, AdminGeneralDashboardData };
 
 export function useAdminDashboardMetrics(dateRange: DateRange | undefined) {
-  const [data, setData] = useState<AdminGeneralDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = useCallback(async (startDate: Date, endDate: Date) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const url = `/api/admin/general?startDate=${format(
-        startDate,
-        "yyyy-MM-dd",
-      )}&endDate=${format(endDate, "yyyy-MM-dd")}`;
-      const res = await fetch(url, { cache: "no-store" });
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result?.error || "Failed to fetch admin metrics.");
-      }
-
-      setData(result);
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Failed to fetch admin metrics.",
+  const { data, loading, error, refetch } = useAsync(
+    () => {
+      if (!dateRange?.from || !dateRange?.to) return Promise.resolve(null);
+      return dashboardService.getGeneralMetrics(
+        format(dateRange.from, "yyyy-MM-dd"),
+        format(dateRange.to, "yyyy-MM-dd"),
       );
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!dateRange?.from || !dateRange?.to) return;
-    void fetchData(dateRange.from, dateRange.to);
-  }, [dateRange?.from, dateRange?.to, fetchData]);
+    },
+    [dateRange?.from, dateRange?.to],
+  );
 
   const metrics = useMemo<AdminDashboardMetrics>(() => {
     const totalDeposits = data?.totalDepositoValor ?? 0;
@@ -83,11 +44,5 @@ export function useAdminDashboardMetrics(dateRange: DateRange | undefined) {
     };
   }, [data]);
 
-  return {
-    data,
-    loading,
-    error,
-    metrics,
-    refetch: fetchData,
-  };
+  return { data, loading, error, metrics, refetch };
 }

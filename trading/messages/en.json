@@ -637,7 +637,9 @@
     "sellAll": "Sell all ({count})",
     "modalInvested": "Investment",
     "modalExpectedProfit": "Expected profit",
-    "modalSellPnL": "Profit after sell (P/L)"
+    "modalSellPnL": "Profit after sell (P/L)",
+    "noTradingPairs": "No trading pairs configured",
+    "noTradingPairsDescription": "There are no active trading pairs available at the moment."
   },
     "Loading": {
     "connecting": "Connecting...",

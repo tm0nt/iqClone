@@ -9,8 +9,6 @@ import {
   Globe,
   Home,
   Settings,
-  Users,
-  Activity,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -32,9 +30,7 @@ const navGroups = [
     label: "Gestão",
     items: [
       { title: "Estatísticas", href: "/dashboard/statistics", icon: BarChart3 },
-      { title: "Usuários", href: "/dashboard/users", icon: Users },
       { title: "Ofertas", href: "/dashboard/offers", icon: Globe },
-      { title: "Operações", href: "/dashboard/operations", icon: Activity },
       { title: "Saques", href: "/dashboard/withdrawals", icon: CreditCard },
     ],
   },

@@ -17,6 +17,7 @@ export function RegisterForm() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { register } = useAuth()
   const { toast } = useToast()
@@ -58,7 +59,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name" className="text-gray-600">
+        <Label htmlFor="name" className="text-muted-foreground">
           Nome Completo
         </Label>
         <Input
@@ -67,11 +68,11 @@ export function RegisterForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          className="h-12 rounded-md border-gray-300 bg-white px-4 shadow-sm focus:border-primary focus:ring-primary"
+          className="h-12 rounded-md border-input bg-background px-4 shadow-sm focus:border-primary focus:ring-primary"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-gray-600">
+        <Label htmlFor="email" className="text-muted-foreground">
           Email
         </Label>
         <Input
@@ -81,11 +82,11 @@ export function RegisterForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="h-12 rounded-md border-gray-300 bg-white px-4 shadow-sm focus:border-primary focus:ring-primary"
+          className="h-12 rounded-md border-input bg-background px-4 shadow-sm focus:border-primary focus:ring-primary"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password" className="text-gray-600">
+        <Label htmlFor="password" className="text-muted-foreground">
           Senha
         </Label>
         <div className="relative">
@@ -96,33 +97,55 @@ export function RegisterForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="h-12 rounded-md border-gray-300 bg-white px-4 shadow-sm focus:border-primary focus:ring-primary"
+            className="h-12 rounded-md border-input bg-background px-4 pr-11 shadow-sm focus:border-primary focus:ring-primary"
           />
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+            className="absolute right-0 top-0 z-10 h-full px-3 py-2 hover:bg-transparent"
             onClick={() => setShowPassword(!showPassword)}
           >
-            {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+            {showPassword ? (
+              <EyeOff className="h-4 w-4 text-muted-foreground/60" />
+            ) : (
+              <Eye className="h-4 w-4 text-muted-foreground/60" />
+            )}
             <span className="sr-only">{showPassword ? "Ocultar senha" : "Mostrar senha"}</span>
           </Button>
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword" className="text-gray-600">
+        <Label htmlFor="confirmPassword" className="text-muted-foreground">
           Confirmar Senha
         </Label>
-        <Input
-          id="confirmPassword"
-          type={showPassword ? "text" : "password"}
-          placeholder="Confirme sua senha"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          className="h-12 rounded-md border-gray-300 bg-white px-4 shadow-sm focus:border-primary focus:ring-primary"
-        />
+        <div className="relative">
+          <Input
+            id="confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            placeholder="Confirme sua senha"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            className="h-12 rounded-md border-input bg-background px-4 pr-11 shadow-sm focus:border-primary focus:ring-primary"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-0 top-0 z-10 h-full px-3 py-2 hover:bg-transparent"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          >
+            {showConfirmPassword ? (
+              <EyeOff className="h-4 w-4 text-muted-foreground/60" />
+            ) : (
+              <Eye className="h-4 w-4 text-muted-foreground/60" />
+            )}
+            <span className="sr-only">
+              {showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+            </span>
+          </Button>
+        </div>
       </div>
 
       <Button

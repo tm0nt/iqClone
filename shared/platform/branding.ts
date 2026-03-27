@@ -1,3 +1,5 @@
+export { formatUsd } from "./currency";
+
 export const BRANDING_DEFAULTS = {
   nomeSite: "Bincebroker",
   logoUrlDark: "default-logo.png",
@@ -313,6 +315,12 @@ export function buildBrandingCssVariables(
     "--platform-warning-foreground-color": getBrandingValue(config, "warningForegroundColor"),
     "--platform-demo-foreground-color": getBrandingValue(config, "demoForegroundColor"),
   };
+}
+
+export function buildAdminThemeCssVariables(
+  _config: Partial<BrandingConfig> | null | undefined,
+): Record<string, string> {
+  return {};
 }
 
 export function normalizeGatewayMode(value: unknown): "manual" | "round_robin" | "random" {

@@ -27,14 +27,23 @@ export async function GET(request: Request) {
     const status = error instanceof MarketDataError ? error.status : 500;
     const message =
       error instanceof Error ? error.message : "Failed to fetch market price";
+    const retryAfterMs = status === 429 ? 5 * 60_000 : undefined;
 
     return NextResponse.json(
       {
         error: message,
         symbol,
         source: getMarketSource(symbol),
+        retryAfterMs,
       },
-      { status },
+      {
+        status,
+        headers: retryAfterMs
+          ? {
+              "Retry-After": String(Math.ceil(retryAfterMs / 1000)),
+            }
+          : undefined,
+      },
     );
   }
 }

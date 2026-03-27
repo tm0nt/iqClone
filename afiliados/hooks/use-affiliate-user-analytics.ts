@@ -1,59 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useAsync } from "@/hooks/use-async";
+import { usersService } from "@/lib/services/users.service";
+import type { AffiliateUserAnalyticsMetrics } from "@/lib/types/account.types";
 
-export interface AffiliateUserAnalyticsMetrics {
-  totalAffiliates: number;
-  newAffiliates: number;
-  activeUsers: number;
-  churnRate: number;
-  percentageChangeTotalAffiliates: number;
-  percentageChangeNewAffiliates: number;
-  percentageChangeChurnRate: number;
-}
+export type { AffiliateUserAnalyticsMetrics };
 
 export function useAffiliateUserAnalytics() {
-  const [metrics, setMetrics] = useState<AffiliateUserAnalyticsMetrics | null>(
-    null,
+  const { data: metrics, loading, error, refetch } = useAsync(
+    () => usersService.getAnalyticsMetrics(),
+    [],
   );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchMetrics = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/account/affiliate/general", {
-        cache: "no-store",
-      });
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data?.error || "Não foi possível carregar as métricas.");
-      }
-
-      setMetrics(data);
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Não foi possível carregar as métricas.",
-      );
-      setMetrics(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchMetrics();
-  }, [fetchMetrics]);
-
-  return {
-    metrics,
-    loading,
-    error,
-    refetch: fetchMetrics,
-  };
+  return { metrics, loading, error, refetch };
 }
