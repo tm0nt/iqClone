@@ -7,6 +7,26 @@ import {
   type ChartColors,
 } from "@/lib/trading-chart";
 
+function formatMarkerAmount(value: number) {
+  const absValue = Math.abs(value);
+
+  if (absValue >= 1_000_000) {
+    const compactValue = absValue / 1_000_000;
+    return `$${compactValue.toFixed(compactValue >= 10 ? 0 : 1)}M`;
+  }
+
+  if (absValue >= 1_000) {
+    const compactValue = absValue / 1_000;
+    return `$${compactValue.toFixed(compactValue >= 10 ? 0 : 1)}K`;
+  }
+
+  if (absValue >= 100) {
+    return `$${absValue.toFixed(0)}`;
+  }
+
+  return `$${absValue.toFixed(2)}`;
+}
+
 function createBalloonMarker(
   root: am5.Root,
   accentColor: am5.Color,
@@ -138,23 +158,21 @@ export function createResultMarkerSprite(
   const shadowColor = am5.Color.fromString(
     getCssVar("--platform-overlay-backdrop-color", "#0f172a"),
   );
-  const profitText =
-    data.result === "win"
-      ? `+$${data.profit.toFixed(2)}`
-      : `-$${data.value.toFixed(2)}`;
-  const titleText = data.result === "win" ? "VITORIA (L/P)" : "DERROTA (L/P)";
+  const markerAmount = data.result === "win" ? data.profit : data.value;
+  const profitText = `${data.result === "win" ? "+" : "-"}${formatMarkerAmount(markerAmount)}`;
+  const titleText = data.result === "win" ? "VITORIA" : "PERDA";
   const outer = am5.Container.new(root, {
     centerX: am5.p50,
     centerY: am5.p100,
-    dy: -10,
+    dy: -8,
     layout: root.verticalLayout,
     interactive: true,
     interactiveChildren: true,
   });
 
-  const width = 150;
-  const height = 54;
-  const pointerLength = 8;
+  const width = 112;
+  const height = 40;
+  const pointerLength = 7;
 
   const balloon = outer.children.push(
     am5.Container.new(root, {
@@ -177,11 +195,11 @@ export function createResultMarkerSprite(
       fill: accent,
       fillOpacity: 0.9,
       strokeOpacity: 0,
-      pointerBaseWidth: 12,
+      pointerBaseWidth: 10,
       pointerLength,
-      pointerX: 20,
+      pointerX: width / 2,
       pointerY: height + pointerLength,
-      cornerRadius: 6,
+      cornerRadius: 10,
       shadowColor,
       shadowBlur: 12,
       shadowOffsetY: 6,
@@ -191,10 +209,14 @@ export function createResultMarkerSprite(
   balloon.children.push(
     am5.Label.new(root, {
       text: titleText,
-      x: 14,
-      y: 12,
+      width: width - 28,
+      x: am5.p50,
+      centerX: am5.p50,
+      y: 8,
       fill: textColor,
-      fontSize: 10,
+      textAlign: "center",
+      oversizedBehavior: "fit",
+      fontSize: 8,
       fontWeight: "700",
     }),
   );
@@ -202,10 +224,14 @@ export function createResultMarkerSprite(
   balloon.children.push(
     am5.Label.new(root, {
       text: profitText,
-      x: 14,
-      y: 31,
+      width: width - 24,
+      x: am5.p50,
+      centerX: am5.p50,
+      y: 20,
       fill: textColor,
-      fontSize: 16,
+      textAlign: "center",
+      oversizedBehavior: "fit",
+      fontSize: 11,
       fontWeight: "700",
       fontFamily: "monospace",
     }),
@@ -213,14 +239,14 @@ export function createResultMarkerSprite(
 
   const closeHit = balloon.children.push(
     am5.Container.new(root, {
-      x: width - 24,
-      y: 10,
-      width: 14,
-      height: 14,
+      x: width - 18,
+      y: 7,
+      width: 10,
+      height: 10,
       interactive: true,
       cursorOverStyle: "pointer",
       background: am5.Circle.new(root, {
-        radius: 8,
+        radius: 6,
         fill: textColor,
         fillOpacity: 0.12,
         strokeOpacity: 0,
@@ -236,7 +262,7 @@ export function createResultMarkerSprite(
       x: am5.p50,
       y: am5.p50,
       fill: textColor,
-      fontSize: 12,
+      fontSize: 9,
       fontWeight: "700",
     }),
   );
@@ -251,7 +277,8 @@ export function createResultMarkerSprite(
       height: 10,
       fill: accent,
       fillOpacity: 0.9,
-      x: 20,
+      x: am5.p50,
+      centerX: am5.p50,
     }),
   );
 
@@ -261,7 +288,8 @@ export function createResultMarkerSprite(
       fill: accent,
       stroke: textColor,
       strokeWidth: 1,
-      x: 20,
+      x: am5.p50,
+      centerX: am5.p50,
       shadowColor: accent,
       shadowBlur: 8,
     }),

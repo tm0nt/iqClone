@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+  type CSSProperties,
+} from "react";
 import { X } from "lucide-react";
 
 import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import * as am5stock from "@amcharts/amcharts5/stock";
+import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Dark from "@amcharts/amcharts5/themes/Dark";
 
 import {
@@ -65,6 +73,14 @@ type DropdownType =
   | "drawingTools"
   | "indicators"
   | null;
+
+const CHART_APPEAR_DURATION_MS = 520;
+const SERIES_APPEAR_DURATION_MS = 420;
+const MARKER_APPEAR_DURATION_MS = 240;
+const Y_AXIS_OUTLIER_MULTIPLIER = 4.5;
+const Y_AXIS_BODY_RANGE_MULTIPLIER = 2.8;
+const Y_AXIS_BOTTOM_PAD_RATIO = 0.1;
+const Y_AXIS_TOP_PAD_RATIO = 0.08;
 
 import type { ChartEventType } from "@/hooks/useChartDebugLog";
 
@@ -141,7 +157,6 @@ export function StockChart({
   const rootRef = useRef<am5.Root | null>(null);
   const stockChartRef = useRef<am5stock.StockChart | null>(null);
   const mainPanelRef = useRef<am5stock.StockPanel | null>(null);
-  const chartBackgroundRef = useRef<am5.Picture | null>(null);
   const currentPriceGlowRef = useRef<am5.Container | null>(null);
   const mainSeriesRef = useRef<any>(null);
   const volumeSeriesRef = useRef<am5xy.ColumnSeries | null>(null);
@@ -172,6 +187,7 @@ export function StockChart({
 
   // States
   const [loading, setLoading] = useState(true);
+  const [hasRenderedChart, setHasRenderedChart] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emptyStateMessage, setEmptyStateMessage] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<DropdownType>(null);
@@ -201,6 +217,7 @@ export function StockChart({
   const isInitialLoadRef = useRef(true);
   const candlesMapRef = useRef<Map<string, CandleData[]>>(new Map());
   const updateChartDataRef = useRef<(() => Promise<unknown>) | null>(null);
+  const chartBackgroundSrc = chartBackgroundUrl || "/world-map.png";
 
   const isMarketUnavailableError = useCallback((message: string) => {
     const normalized = message.toLowerCase();
@@ -217,22 +234,6 @@ export function StockChart({
   }, [currentPrice]);
   dismissResultRef.current = onDismissResult;
 
-  useEffect(() => {
-    const picture = chartBackgroundRef.current;
-    if (!picture) return;
-    picture.setAll({
-      src: chartBackgroundUrl || "/world-map.png",
-      opacity: 0.2,
-      width: am5.percent(100),
-      height: am5.percent(100),
-      centerX: 0,
-      centerY: 0,
-      x: 0,
-      y: 0,
-      visible: true,
-    });
-  }, [chartBackgroundUrl]);
-
   debugLogRef.current = debugLog;
   const _dbg = useCallback(
     (type: ChartEventType, msg: string, data?: Record<string, unknown>) =>
@@ -240,8 +241,38 @@ export function StockChart({
     [],
   );
 
+  const syncSeriesData = useCallback(
+    (series: { data?: any } | null, nextData: unknown[]) => {
+      const data = series?.data;
+      if (!data) {
+        return;
+      }
+
+      const currentLength = data.length;
+      if (currentLength === 0) {
+        data.setAll(nextData);
+        return;
+      }
+
+      const overlap = Math.min(currentLength, nextData.length);
+      for (let index = 0; index < overlap; index += 1) {
+        data.setIndex(index, nextData[index]);
+      }
+
+      for (let index = overlap; index < nextData.length; index += 1) {
+        data.push(nextData[index]);
+      }
+
+      for (let index = currentLength - 1; index >= nextData.length; index -= 1) {
+        data.removeIndex(index);
+      }
+    },
+    [],
+  );
+
   const syncMarkerSeries = useCallback(() => {
-    entryMarkerSeriesRef.current?.data.setAll(
+    syncSeriesData(
+      entryMarkerSeriesRef.current,
       entryMarkers
         .filter((marker) => marker.pair === tradingPair)
         .map((marker) => ({
@@ -256,7 +287,8 @@ export function StockChart({
         })),
     );
 
-    resultMarkerSeriesRef.current?.data.setAll(
+    syncSeriesData(
+      resultMarkerSeriesRef.current,
       resultMarkers
         .filter((marker) => marker.pair === tradingPair)
         .map((marker) => ({
@@ -273,7 +305,7 @@ export function StockChart({
           profit: marker.profit,
         })),
     );
-  }, [entryMarkers, resultMarkers, timeframe, tradingPair]);
+  }, [entryMarkers, resultMarkers, syncSeriesData, timeframe, tradingPair]);
 
   const drawingTools = useMemo(() => createTradingChartDrawingTools(t), [t]);
   const indicators = useMemo(() => createTradingChartIndicators(t), [t]);
@@ -290,11 +322,14 @@ export function StockChart({
 
   const LERP_SPEED = 0.18; // 0-1, higher = faster convergence
   const getYAxisStep = useCallback((midpoint: number) => {
-    if (midpoint >= 1000) return 5;
-    if (midpoint >= 100) return 1;
-    if (midpoint >= 10) return 0.5;
-    if (midpoint >= 1) return 0.1;
-    return 0.01;
+    const absoluteMidpoint = Math.abs(midpoint);
+    if (absoluteMidpoint >= 1000) return 5;
+    if (absoluteMidpoint >= 100) return 1;
+    if (absoluteMidpoint >= 10) return 0.1;
+    if (absoluteMidpoint >= 1) return 0.01;
+    if (absoluteMidpoint >= 0.1) return 0.001;
+    if (absoluteMidpoint >= 0.01) return 0.0001;
+    return 0.00001;
   }, []);
 
   const updateTradeHoverVisuals = useCallback(() => {
@@ -442,34 +477,89 @@ export function StockChart({
 
     let lo = Infinity;
     let hi = -Infinity;
+    let bodyLo = Infinity;
+    let bodyHi = -Infinity;
+    let lastVisibleCandle: CandleData | null = null;
+    const visibleRanges: number[] = [];
     for (let i = iStart; i < iEnd; i++) {
       const c = series.data.getIndex(i) as CandleData | undefined;
       if (!c) continue;
       if (c.Low < lo) lo = c.Low;
       if (c.High > hi) hi = c.High;
+      const candleBodyLow = Math.min(c.Open, c.Close);
+      const candleBodyHigh = Math.max(c.Open, c.Close);
+      if (candleBodyLow < bodyLo) bodyLo = candleBodyLow;
+      if (candleBodyHigh > bodyHi) bodyHi = candleBodyHigh;
+      visibleRanges.push(
+        Math.max(Math.abs(c.High - c.Low), Math.abs(c.Close - c.Open)),
+      );
+      lastVisibleCandle = c;
     }
 
     if (!Number.isFinite(lo) || !Number.isFinite(hi)) return;
 
-    if (hi <= lo) {
+    const midpointBase =
+      Number.isFinite(bodyLo) && Number.isFinite(bodyHi)
+        ? (bodyHi + bodyLo) / 2
+        : (hi + lo) / 2;
+    const yStep = getYAxisStep(midpointBase);
+    const sortedRanges = visibleRanges
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .sort((left, right) => left - right);
+    const medianRange =
+      sortedRanges.length > 0
+        ? sortedRanges[Math.floor(sortedRanges.length / 2)]
+        : 0;
+    const bodyRange = Math.max(bodyHi - bodyLo, yStep * 0.08);
+    const fullRange = hi - lo;
+    const typicalRange = Math.max(
+      medianRange,
+      yStep * 0.08,
+      Math.abs(midpointBase || 1) * 0.00012,
+    );
+
+    let effectiveLo = lo;
+    let effectiveHi = hi;
+
+    const hasDistortingSpike =
+      Number.isFinite(bodyLo) &&
+      Number.isFinite(bodyHi) &&
+      fullRange >
+        Math.max(
+          bodyRange * Y_AXIS_BODY_RANGE_MULTIPLIER,
+          typicalRange * Y_AXIS_OUTLIER_MULTIPLIER,
+        );
+
+    if (hasDistortingSpike) {
+      const wickAllowance = Math.max(typicalRange * 0.75, yStep * 0.06);
+      const lastVisibleLow = lastVisibleCandle
+        ? Math.min(lastVisibleCandle.Low, lastVisibleCandle.Open, lastVisibleCandle.Close)
+        : bodyLo;
+      const lastVisibleHigh = lastVisibleCandle
+        ? Math.max(lastVisibleCandle.High, lastVisibleCandle.Open, lastVisibleCandle.Close)
+        : bodyHi;
+
+      effectiveLo = Math.min(bodyLo - wickAllowance, lastVisibleLow);
+      effectiveHi = Math.max(bodyHi + wickAllowance, lastVisibleHigh);
+    }
+
+    if (effectiveHi <= effectiveLo) {
       const fallbackStep = getYAxisStep(
-        lo || hi || currentPriceRef.current || 1,
+        effectiveLo || effectiveHi || currentPriceRef.current || 1,
       );
       const epsilon = Math.max(
         fallbackStep * 0.6,
-        Math.abs(lo || hi || 1) * 0.0008,
+        Math.abs(effectiveLo || effectiveHi || 1) * 0.0008,
       );
-      lo -= epsilon;
-      hi += epsilon;
+      effectiveLo -= epsilon;
+      effectiveHi += epsilon;
     }
 
-    const range = hi - lo;
-    const bottomPad = range * 0.18;
-    const topPad = range * 0.14;
-    const midpoint = (hi + lo) / 2;
-    const yStep = getYAxisStep(midpoint);
-    const targetMin = Math.floor((lo - bottomPad) / yStep) * yStep;
-    const targetMax = Math.ceil((hi + topPad) / yStep) * yStep;
+    const range = effectiveHi - effectiveLo;
+    const bottomPad = Math.max(range * Y_AXIS_BOTTOM_PAD_RATIO, typicalRange * 0.22);
+    const topPad = Math.max(range * Y_AXIS_TOP_PAD_RATIO, typicalRange * 0.18);
+    const targetMin = Math.floor((effectiveLo - bottomPad) / yStep) * yStep;
+    const targetMax = Math.ceil((effectiveHi + topPad) / yStep) * yStep;
     yTargetRef.current = { min: targetMin, max: targetMax };
 
     // First call or explicit instant — jump directly and cancel any running lerp
@@ -590,9 +680,15 @@ export function StockChart({
         }
       } else {
         const nextOpen = last ? last.Close : newPrice;
+        const recentRange = last
+          ? Math.max(Math.abs(last.High - last.Low), Math.abs(last.Close - last.Open))
+          : 0;
         const seedRange = Math.max(
-          getYAxisStep(newPrice) * 0.08,
-          Math.abs(newPrice || 1) * 0.00015,
+          Math.min(
+            Math.max(recentRange * 0.18, getYAxisStep(newPrice) * 0.006),
+            getYAxisStep(newPrice) * 0.018,
+          ),
+          Math.abs(newPrice || 1) * 0.00002,
         );
         const newCandle: CandleData = {
           Date: currentCandleStart,
@@ -713,33 +809,11 @@ export function StockChart({
     }
 
     try {
-      setLoading(true);
+      setLoading(!hasRenderedChart);
       setError(null);
 
       const myGen = ++generationRef.current;
       saveDrawingsForPair(activeDrawingPairRef.current);
-      drawingControlRef.current?.clearDrawings();
-      chartRuntimeCleanupRef.current?.();
-      chartRuntimeCleanupRef.current = null;
-      mainSeriesRef.current?.data?.clear?.();
-      volumeSeriesRef.current?.data?.clear?.();
-      entryMarkerSeriesRef.current?.data?.clear?.();
-      resultMarkerSeriesRef.current?.data?.clear?.();
-      mainSeriesRef.current?.dispose();
-      volumeSeriesRef.current?.dispose();
-      entryMarkerSeriesRef.current?.dispose();
-      resultMarkerSeriesRef.current?.dispose();
-      mainSeriesRef.current = null;
-      volumeSeriesRef.current = null;
-      entryMarkerSeriesRef.current = null;
-      resultMarkerSeriesRef.current = null;
-
-      Object.values(indicatorsRef.current).forEach((ind: any) =>
-        ind.dispose?.(),
-      );
-      indicatorsRef.current = {};
-      setActiveIndicators([]);
-      mainPanel.series.clear();
 
       const cacheKey = `${tradingPair}_${timeframe}`;
       let dataToLoad: CandleData[] = candlesMapRef.current.get(cacheKey) || [];
@@ -765,6 +839,35 @@ export function StockChart({
         isAm5Disposed(valueAxis);
       if (isStaleRun) {
         return;
+      }
+
+      drawingControlRef.current?.clearDrawings();
+      chartRuntimeCleanupRef.current?.();
+      chartRuntimeCleanupRef.current = null;
+      mainSeriesRef.current?.data?.clear?.();
+      volumeSeriesRef.current?.data?.clear?.();
+      entryMarkerSeriesRef.current?.data?.clear?.();
+      resultMarkerSeriesRef.current?.data?.clear?.();
+      mainSeriesRef.current?.dispose();
+      volumeSeriesRef.current?.dispose();
+      entryMarkerSeriesRef.current?.dispose();
+      resultMarkerSeriesRef.current?.dispose();
+      mainSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+      entryMarkerSeriesRef.current = null;
+      resultMarkerSeriesRef.current = null;
+
+      Object.values(indicatorsRef.current).forEach((ind: any) =>
+        ind.dispose?.(),
+      );
+      indicatorsRef.current = {};
+      setActiveIndicators([]);
+      mainPanel.series.clear();
+      yTargetRef.current = null;
+      yCurrentRef.current = null;
+      if (yLerpRafRef.current !== null) {
+        cancelAnimationFrame(yLerpRafRef.current);
+        yLerpRafRef.current = null;
       }
 
       _dbg(
@@ -936,9 +1039,55 @@ export function StockChart({
       );
       resultMarkerSeriesRef.current = newResultMarkerSeries;
 
-      newMainSeries.data.setAll(dataToLoad);
-      newVolumeSeries.data.setAll(dataToLoad);
+      let hasAppliedViewport = false;
+      const applyInitialViewport = () => {
+        if (
+          hasAppliedViewport ||
+          generationRef.current !== myGen ||
+          rootRef.current !== root ||
+          isAm5Disposed(root) ||
+          isAm5Disposed(dateAxis)
+        ) {
+          return;
+        }
+
+        hasAppliedViewport = true;
+        const len = newMainSeries.data.length;
+        const startIndex = Math.max(0, len - VISIBLE_CANDLE_COUNT);
+        const start = len > 0 ? startIndex / len : 0;
+
+        dateAxis.zoom(start, 1, false);
+        isAtEndRef.current = true;
+
+        requestAnimationFrame(() => {
+          if (
+            generationRef.current !== myGen ||
+            rootRef.current !== root ||
+            isAm5Disposed(root)
+          ) {
+            return;
+          }
+
+          fitYAxisToVisibleData(true);
+        });
+      };
+
+      if (dataToLoad.length > 0) {
+        newMainSeries.events.once?.("datavalidated", applyInitialViewport);
+      }
+
+      syncSeriesData(newMainSeries, dataToLoad);
+      syncSeriesData(newVolumeSeries, dataToLoad);
       syncMarkerSeries();
+      newMainSeries.appear?.(SERIES_APPEAR_DURATION_MS);
+      newVolumeSeries.appear?.(SERIES_APPEAR_DURATION_MS);
+      newEntryMarkerSeries.appear?.(MARKER_APPEAR_DURATION_MS);
+      newResultMarkerSeries.appear?.(MARKER_APPEAR_DURATION_MS);
+      if (isInitialLoadRef.current) {
+        stockChart.appear?.(CHART_APPEAR_DURATION_MS, 80);
+      } else {
+        mainPanel.appear?.(SERIES_APPEAR_DURATION_MS, 0);
+      }
 
       const serializedDrawings = drawingsByPairRef.current.get(tradingPair);
       if (serializedDrawings?.length) {
@@ -956,16 +1105,7 @@ export function StockChart({
             stockChart.getNumberFormatter().format(lastCandle.Close),
           );
         updateTradeHoverVisuals();
-
-        // Initial X-axis zoom (once, after first data validation)
-        newMainSeries.events.once?.("datavalidated", () => {
-          const len = newMainSeries.data.length;
-          const startIndex = Math.max(0, len - VISIBLE_CANDLE_COUNT);
-          const start = len > 0 ? startIndex / len : 0;
-          dateAxis.zoom(start, 1, false);
-          isAtEndRef.current = true;
-          fitYAxisToVisibleData(true);
-        });
+        requestAnimationFrame(applyInitialViewport);
       }
 
       // Refit Y when the user scrolls/zooms the X-axis (instant for direct user action)
@@ -998,6 +1138,7 @@ export function StockChart({
 
       setError(null);
       setEmptyStateMessage(null);
+      setHasRenderedChart(true);
       setLoading(false);
     } catch (err: unknown) {
       const errorMessage =
@@ -1017,6 +1158,7 @@ export function StockChart({
       setLoading(false);
     }
   }, [
+    hasRenderedChart,
     isMarketUnavailableError,
     saveDrawingsForPair,
     tradingPair,
@@ -1141,7 +1283,11 @@ export function StockChart({
         fontSize: 11,
         fontFamily: "Inter, system-ui, sans-serif",
       });
-    root.setThemes([am5themes_Dark.new(root), myTheme]);
+    root.setThemes([
+      am5themes_Animated.new(root),
+      am5themes_Dark.new(root),
+      myTheme,
+    ]);
 
     const stockChart = root.container.children.push(
       am5stock.StockChart.new(root, {
@@ -1177,20 +1323,6 @@ export function StockChart({
     );
     mainPanelRef.current = mainPanel;
 
-    chartBackgroundRef.current = mainPanel.plotContainer.children.unshift(
-      am5.Picture.new(root, {
-        width: am5.percent(100),
-        height: am5.percent(100),
-        centerX: 0,
-        centerY: 0,
-        x: 0,
-        y: 0,
-        isMeasured: false,
-        src: chartBackgroundUrl || "/world-map.png",
-        opacity: 0.2,
-        interactive: false,
-      }),
-    );
     currentPriceGlowRef.current = mainPanel.plotContainer.children.push(
       am5.Container.new(root, {
         isMeasured: false,
@@ -1421,7 +1553,6 @@ export function StockChart({
       drawingControlRef.current = null;
       rootRef.current?.dispose();
       rootRef.current = null;
-      chartBackgroundRef.current = null;
       currentPriceGlowRef.current = null;
       hoverValueRangeRef.current = null;
       orderRangesRef.current.clear();
@@ -2032,14 +2163,55 @@ export function StockChart({
     playSettlementOutcomeSound,
   ]);
 
+  const chartBackgroundStyle = useMemo<CSSProperties>(
+    () => ({
+      backgroundImage: `url("${chartBackgroundSrc}")`,
+      backgroundRepeat: "no-repeat",
+      backgroundPosition: "center",
+      backgroundSize: "contain",
+      opacity: 0.1,
+      filter: "drop-shadow(0 0 28px rgba(255,255,255,0.08))",
+      mixBlendMode: "screen",
+    }),
+    [chartBackgroundSrc],
+  );
+
+  const chartBackgroundGlowStyle = useMemo<CSSProperties>(
+    () => ({
+      background:
+        "radial-gradient(circle at 50% 56%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.025) 18%, rgba(0,0,0,0) 48%)",
+    }),
+    [],
+  );
+
+  const chartBackgroundVignetteStyle = useMemo<CSSProperties>(
+    () => ({
+      background:
+        "radial-gradient(circle at 50% 56%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 42%, rgba(0,0,0,0.22) 78%, rgba(0,0,0,0.38) 100%)",
+    }),
+    [],
+  );
+
   // ================= Render =================
   return (
     <div className="relative w-full h-full flex flex-col">
       <div className="relative flex-1 w-full h-full">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute inset-0" style={chartBackgroundGlowStyle} />
+          <div
+            className="absolute left-1/2 top-[56%] h-[26%] w-[44%] min-h-[170px] min-w-[280px] max-h-[320px] max-w-[640px] -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 md:h-[34%]"
+            style={chartBackgroundStyle}
+          />
+          <div
+            className="absolute inset-0"
+            style={chartBackgroundVignetteStyle}
+          />
+        </div>
+
         <div
           ref={chartRef}
-          className={`h-full w-full transition-opacity duration-200 ${
-            loading ? "opacity-0" : "opacity-100"
+          className={`relative z-10 h-full w-full transition-opacity duration-200 ${
+            loading && !hasRenderedChart ? "opacity-0" : "opacity-100"
           }`}
         />
 
@@ -2110,7 +2282,7 @@ export function StockChart({
         />
       </div>
 
-      {loading && <TradingChartLoader />}
+      {loading && !hasRenderedChart && <TradingChartLoader />}
 
       {emptyStateMessage && !loading && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 px-6">
