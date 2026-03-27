@@ -126,6 +126,19 @@ export function CryptoSelector({
   const closeDropdown = useCallback(() => setIsDropdownOpen(false), []);
 
   useEffect(() => {
+    if (!isDropdownOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isDropdownOpen]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isDropdownOpen) closeDropdown();
     };
@@ -318,10 +331,32 @@ export function CryptoSelector({
       )}
 
       {isDropdownOpen && (
-        <div className="fixed inset-0 z-[9999] bg-platform-overlay-backdrop backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-platform-overlay-surface backdrop-blur-xl rounded-2xl border border-platform-overlay-card shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-platform-overlay-card">
-              <h3 className="text-platform-text font-bold text-xl">{t("selectAsset")}</h3>
+        <div
+          className={`fixed inset-0 z-[9999] bg-platform-overlay-backdrop/80 backdrop-blur-md ${
+            isMobile
+              ? "flex items-end justify-center p-0"
+              : "flex items-center justify-center p-4"
+          }`}
+          onClick={() => {
+            playTick();
+            closeDropdown();
+          }}
+        >
+          <div
+            className={`bg-platform-overlay-surface backdrop-blur-xl border border-platform-overlay-card shadow-2xl overflow-hidden flex flex-col ${
+              isMobile
+                ? "w-full max-h-[82vh] rounded-t-[28px] rounded-b-none border-b-0"
+                : "w-full max-w-2xl max-h-[90vh] rounded-2xl"
+            }`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={`flex justify-between items-center border-b border-platform-overlay-card ${isMobile ? "px-4 pb-4 pt-3" : "p-6"}`}>
+              <div className="flex flex-col">
+                {isMobile ? (
+                  <div className="mx-auto mb-3 h-1.5 w-14 rounded-full bg-platform-overlay-muted/40" />
+                ) : null}
+                <h3 className="text-platform-text font-bold text-xl">{t("selectAsset")}</h3>
+              </div>
               <button
                 className="w-10 h-10 rounded-xl flex items-center justify-center bg-platform-overlay-card hover:bg-platform-overlay-hover transition-all duration-200 group"
                 onClick={() => {
@@ -333,8 +368,8 @@ export function CryptoSelector({
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-grow">
-              <div className="relative mb-6">
+            <div className={`overflow-y-auto flex-grow ${isMobile ? "px-4 pb-4" : "p-6"}`}>
+              <div className={`relative ${isMobile ? "mb-4 mt-4" : "mb-6"}`}>
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-platform-overlay-muted" />
                 </div>
@@ -347,7 +382,7 @@ export function CryptoSelector({
                 />
               </div>
 
-              <div className="flex items-center mb-6 gap-2">
+              <div className={`flex items-center gap-2 ${isMobile ? "mb-4" : "mb-6"}`}>
                 <button
                   className={`px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center transition-all duration-200 ${
                     filterFavorites
@@ -390,13 +425,11 @@ export function CryptoSelector({
                       onClick={() => changeCrypto(crypto)}
                     >
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mr-3 sm:mr-4 overflow-hidden p-1 sm:p-2 group-hover:bg-platform-overlay-hover transition-colors">
-                        <Image
-                          src={crypto.image || "/placeholder.svg?width=32&height=32&query=crypto+badge"}
-                          alt={crypto.name}
-                          width={64}
-                          height={64}
-                          className="object-contain"
-                          priority={selectedCrypto?.symbol === crypto.symbol}
+                        <TradingPairIcon
+                          image={crypto.image}
+                          name={crypto.name}
+                          fallback={crypto.logo || crypto.symbol.slice(0, 3)}
+                          className="h-full w-full object-contain"
                         />
                       </div>
                       <div className="flex-grow">
