@@ -174,6 +174,8 @@ export function StockChart({
   const currentPriceRef = useRef<number>(currentPrice);
   const chartColorsRef = useRef<ChartColors | null>(null);
   const dismissResultRef = useRef(onDismissResult);
+  const entryMarkersRef = useRef(entryMarkers);
+  const resultMarkersRef = useRef(resultMarkers);
   const chartRuntimeCleanupRef = useRef<(() => void) | null>(null);
   const drawingsByPairRef = useRef<Map<string, Array<unknown>>>(new Map());
   const activeDrawingPairRef = useRef(tradingPair);
@@ -187,7 +189,6 @@ export function StockChart({
 
   // States
   const [loading, setLoading] = useState(true);
-  const [hasRenderedChart, setHasRenderedChart] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emptyStateMessage, setEmptyStateMessage] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<DropdownType>(null);
@@ -232,6 +233,15 @@ export function StockChart({
   useEffect(() => {
     currentPriceRef.current = currentPrice;
   }, [currentPrice]);
+
+  useEffect(() => {
+    entryMarkersRef.current = entryMarkers;
+  }, [entryMarkers]);
+
+  useEffect(() => {
+    resultMarkersRef.current = resultMarkers;
+  }, [resultMarkers]);
+
   dismissResultRef.current = onDismissResult;
 
   debugLogRef.current = debugLog;
@@ -273,7 +283,7 @@ export function StockChart({
   const syncMarkerSeries = useCallback(() => {
     syncSeriesData(
       entryMarkerSeriesRef.current,
-      entryMarkers
+      entryMarkersRef.current
         .filter((marker) => marker.pair === tradingPair)
         .map((marker) => ({
           valueX: chartService.getCandleStartTime(marker.createdAt, timeframe),
@@ -289,7 +299,7 @@ export function StockChart({
 
     syncSeriesData(
       resultMarkerSeriesRef.current,
-      resultMarkers
+      resultMarkersRef.current
         .filter((marker) => marker.pair === tradingPair)
         .map((marker) => ({
           valueX: chartService.getCandleStartTime(marker.createdAt, timeframe),
@@ -305,7 +315,7 @@ export function StockChart({
           profit: marker.profit,
         })),
     );
-  }, [entryMarkers, resultMarkers, syncSeriesData, timeframe, tradingPair]);
+  }, [syncSeriesData, timeframe, tradingPair]);
 
   const drawingTools = useMemo(() => createTradingChartDrawingTools(t), [t]);
   const indicators = useMemo(() => createTradingChartIndicators(t), [t]);
@@ -809,37 +819,11 @@ export function StockChart({
     }
 
     try {
-      setLoading(!hasRenderedChart);
+      setLoading(true);
       setError(null);
 
       const myGen = ++generationRef.current;
       saveDrawingsForPair(activeDrawingPairRef.current);
-
-      const cacheKey = `${tradingPair}_${timeframe}`;
-      let dataToLoad: CandleData[] = candlesMapRef.current.get(cacheKey) || [];
-      const cached = dataToLoad.length > 0;
-      if (!cached) {
-        _dbg("data_load", `Fetching ${tradingPair} ${timeframe}...`);
-        dataToLoad = await chartService.fetchCandles(
-          tradingPair,
-          timeframe,
-          INITIAL_FETCH_CANDLES,
-        );
-        candlesMapRef.current.set(cacheKey, dataToLoad);
-      }
-
-      const isStaleRun =
-        generationRef.current !== myGen ||
-        rootRef.current !== root ||
-        stockChartRef.current !== stockChart ||
-        mainPanelRef.current !== mainPanel ||
-        isAm5Disposed(root) ||
-        isAm5Disposed(mainPanel) ||
-        isAm5Disposed(dateAxis) ||
-        isAm5Disposed(valueAxis);
-      if (isStaleRun) {
-        return;
-      }
 
       drawingControlRef.current?.clearDrawings();
       chartRuntimeCleanupRef.current?.();
@@ -868,6 +852,32 @@ export function StockChart({
       if (yLerpRafRef.current !== null) {
         cancelAnimationFrame(yLerpRafRef.current);
         yLerpRafRef.current = null;
+      }
+
+      const cacheKey = `${tradingPair}_${timeframe}`;
+      let dataToLoad: CandleData[] = candlesMapRef.current.get(cacheKey) || [];
+      const cached = dataToLoad.length > 0;
+      if (!cached) {
+        _dbg("data_load", `Fetching ${tradingPair} ${timeframe}...`);
+        dataToLoad = await chartService.fetchCandles(
+          tradingPair,
+          timeframe,
+          INITIAL_FETCH_CANDLES,
+        );
+        candlesMapRef.current.set(cacheKey, dataToLoad);
+      }
+
+      const isStaleRun =
+        generationRef.current !== myGen ||
+        rootRef.current !== root ||
+        stockChartRef.current !== stockChart ||
+        mainPanelRef.current !== mainPanel ||
+        isAm5Disposed(root) ||
+        isAm5Disposed(mainPanel) ||
+        isAm5Disposed(dateAxis) ||
+        isAm5Disposed(valueAxis);
+      if (isStaleRun) {
+        return;
       }
 
       _dbg(
@@ -1039,43 +1049,6 @@ export function StockChart({
       );
       resultMarkerSeriesRef.current = newResultMarkerSeries;
 
-      let hasAppliedViewport = false;
-      const applyInitialViewport = () => {
-        if (
-          hasAppliedViewport ||
-          generationRef.current !== myGen ||
-          rootRef.current !== root ||
-          isAm5Disposed(root) ||
-          isAm5Disposed(dateAxis)
-        ) {
-          return;
-        }
-
-        hasAppliedViewport = true;
-        const len = newMainSeries.data.length;
-        const startIndex = Math.max(0, len - VISIBLE_CANDLE_COUNT);
-        const start = len > 0 ? startIndex / len : 0;
-
-        dateAxis.zoom(start, 1, false);
-        isAtEndRef.current = true;
-
-        requestAnimationFrame(() => {
-          if (
-            generationRef.current !== myGen ||
-            rootRef.current !== root ||
-            isAm5Disposed(root)
-          ) {
-            return;
-          }
-
-          fitYAxisToVisibleData(true);
-        });
-      };
-
-      if (dataToLoad.length > 0) {
-        newMainSeries.events.once?.("datavalidated", applyInitialViewport);
-      }
-
       syncSeriesData(newMainSeries, dataToLoad);
       syncSeriesData(newVolumeSeries, dataToLoad);
       syncMarkerSeries();
@@ -1105,7 +1078,27 @@ export function StockChart({
             stockChart.getNumberFormatter().format(lastCandle.Close),
           );
         updateTradeHoverVisuals();
-        requestAnimationFrame(applyInitialViewport);
+
+        newMainSeries.events.once?.("datavalidated", () => {
+          const len = newMainSeries.data.length;
+          const startIndex = Math.max(0, len - VISIBLE_CANDLE_COUNT);
+          const start = len > 0 ? startIndex / len : 0;
+          dateAxis.zoom(start, 1, false);
+          isAtEndRef.current = true;
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (
+                generationRef.current !== myGen ||
+                rootRef.current !== root ||
+                isAm5Disposed(root)
+              ) {
+                return;
+              }
+
+              fitYAxisToVisibleData(true);
+            });
+          });
+        });
       }
 
       // Refit Y when the user scrolls/zooms the X-axis (instant for direct user action)
@@ -1138,7 +1131,6 @@ export function StockChart({
 
       setError(null);
       setEmptyStateMessage(null);
-      setHasRenderedChart(true);
       setLoading(false);
     } catch (err: unknown) {
       const errorMessage =
@@ -1158,7 +1150,6 @@ export function StockChart({
       setLoading(false);
     }
   }, [
-    hasRenderedChart,
     isMarketUnavailableError,
     saveDrawingsForPair,
     tradingPair,
@@ -1167,7 +1158,6 @@ export function StockChart({
     onPriceUpdate,
     updateLiveDataFromQuote,
     fitYAxisToVisibleData,
-    syncMarkerSeries,
     t,
     updateTradeHoverVisuals,
   ]);
@@ -1187,7 +1177,7 @@ export function StockChart({
 
   useEffect(() => {
     syncMarkerSeries();
-  }, [syncMarkerSeries]);
+  }, [entryMarkers, resultMarkers, syncMarkerSeries]);
 
   useEffect(() => {
     updateTradeHoverVisuals();
@@ -2211,7 +2201,7 @@ export function StockChart({
         <div
           ref={chartRef}
           className={`relative z-10 h-full w-full transition-opacity duration-200 ${
-            loading && !hasRenderedChart ? "opacity-0" : "opacity-100"
+            loading ? "opacity-0" : "opacity-100"
           }`}
         />
 
@@ -2282,7 +2272,7 @@ export function StockChart({
         />
       </div>
 
-      {loading && !hasRenderedChart && <TradingChartLoader />}
+      {loading && <TradingChartLoader />}
 
       {emptyStateMessage && !loading && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 px-6">
