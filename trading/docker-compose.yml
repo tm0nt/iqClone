@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db # Se você nomeou o Dockerfile do DB diferente
+    image: opcao-pagamentos/postgres
+    container_name: opcao-pagamentos-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-seu_usuario}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sua_senha}
+      POSTGRES_DB: ${DB_NAME:-opcao_pagamentos_cloud}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opcao-pagamentos/web
+    container_name: opcao-pagamentos-web
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://${DB_USER:-seu_usuario}:${DB_PASSWORD:-sua_senha}@db:5432/${DB_NAME:-opcao_pagamentos_cloud}?schema=public
+    volumes:
+      - .:/app
+      - .pnpm-store:/app/.pnpm-store
+      - .next:/app/.next
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    image: opcao-pagamentos/nginx
+    container_name: opcao-pagamentos-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - certbot_data:/etc/letsencrypt
+      - dhparam:/etc/ssl/certs
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    volumes:
+      - certbot_data:/etc/letsencrypt
+      - web_root:/var/www/certbot
+    depends_on:
+      - nginx
+    entrypoint: >-
+      sh -c "trap exit TERM; while :; do
+        certbot renew --webroot -w /var/www/certbot --email seu-email@seu-dominio.com --agree-tos --no-eff-email --domains opcao.pagamentos.cloud &&
+        nginx -s reload &&
+        sleep 12h || sleep 1h; done"
+
+volumes:
+  db_data:
+  .pnpm-store:
+  .next:
+  certbot_data:
+  web_root:
+  dhparam:

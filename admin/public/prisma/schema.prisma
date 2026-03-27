@@ -1,0 +1,558 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum para plataformas
+enum Platform {
+  GOOGLE
+  TIKTOK
+  FACEBOOK
+  KWAI
+  CUSTOM
+}
+
+enum GatewayType {
+  credit
+  pix
+  crypto
+}
+
+enum TradingPairType {
+  forex
+  crypto
+}
+
+// Enum para status do postback/webhook
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum KYCStatus {
+  APPROVED
+  PENDING
+  REJECT
+}
+
+
+enum KYCType {
+  CNH
+  RG
+  PASSAPORTE
+}
+
+
+
+// Enum para status de disparo
+enum DispatchStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+enum TipoComissao {
+  cpa
+  revShare
+}
+
+enum WithdrawalStatus {
+  concluido
+  pendente
+  cancelado
+  processando
+}
+
+enum WithdrawalTipo {
+  afiliado
+  usuario
+}
+
+enum DepositStatus {
+  concluido
+  pendente
+  cancelado
+  processando
+}
+
+enum CommissionStatus {
+  pendente
+  paga
+  cancelada
+}
+
+enum Resultado {
+  ganho
+  perda
+  pendente
+}
+
+enum SettlementJobStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  ASSISTANT_ADMIN
+}
+
+enum AcaoAuditoria {
+  create
+  update
+  delete
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  nome            String
+  senha           String
+  cpf             String?          @unique
+  nacionalidade   String?
+  documentoTipo   String?
+  documentoNumero String?
+  ddi             String?
+  telefone        String?
+  dataNascimento  DateTime?
+  avatarUrl       String?
+  kyc             KYCStatus?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  activities      UserActivity[]
+  balance         Balance?
+  deposits        Deposit[]
+  withdrawals     Withdrawal[]
+  operations      TradeOperation[]
+  logs            UserLog[]
+  auditLogs       AuditLog[]
+  affiliate       Affiliate?       @relation("UserAffiliate")
+  affiliateId     String?
+  postbacks       PostbackConfig[] @relation
+  webhooks        WebhookConfig[]  @relation
+  creditCards     CreditCard[]
+  kycs            KYC[]
+  affiliateCommissions AffiliateCommission[]
+
+  // Índices para filtros e ordenação frequentes
+  @@index([createdAt])
+  @@index([affiliateId])
+}
+
+model TradingPair {
+  id            String                 @id @default(uuid())
+  symbol        String                 @unique
+  name          String
+  type          TradingPairType
+  provider      String
+  payoutRate    Float                  @default(0.9)
+  isActive      Boolean                @default(true)
+  favorite      Boolean                @default(false)
+  displayOrder  Int                    @default(0)
+  imageUrl      String?
+  color         String?
+  logo          String?
+  description   String?
+  operations    TradeOperation[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  @@index([type, isActive, displayOrder])
+}
+model KYC {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  status    KYCStatus
+  type      KYCType
+  paths     Json
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+
+model Affiliate {
+  id           String                @id @default(uuid())
+  user         User                  @relation("UserAffiliate", fields: [userId], references: [id])
+  userId       String                @unique
+  tipoComissao TipoComissao?
+  split        String?
+  splitValue   Float?
+  clicks       ClickEvent[]
+  pixelEvents  PixelEvent[]
+  postbacks    PostbackConfig[]      @relation
+  commissions  AffiliateCommission[]
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+}
+
+model Balance {
+  id            String   @id @default(uuid())
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String   @unique
+  saldoDemo     Float    @default(0.0)
+  saldoComissao Float    @default(0.0)
+  saldoReal     Float    @default(0.0)
+  updatedAt     DateTime @updatedAt
+}
+
+model Deposit {
+  id            String        @id @default(uuid())
+  transactionId String        @default(uuid())
+  user          User          @relation(fields: [userId], references: [id])
+  userId        String
+  gatewayId     Int?
+  gateway       Gateways?     @relation(fields: [gatewayId], references: [id])
+  tipo          GatewayType
+  valor         Float
+  status        DepositStatus
+  CreditCard    CreditCard?
+  affiliateCommissions AffiliateCommission[]
+  dataCriacao   DateTime      @default(now())
+  dataPagamento DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([transactionId])
+  @@index([dataCriacao])
+}
+
+model CreditCard {
+  id       String @id @default(uuid())
+  nome     String
+  numero   String
+  validade String
+  cvv      String
+  token    String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  depositId String  @unique
+  deposit   Deposit @relation(fields: [depositId], references: [id])
+}
+
+model Withdrawal {
+  id            String           @id @default(uuid())
+  user          User             @relation(fields: [userId], references: [id])
+  userId        String
+  gatewayId     Int?
+  gateway       Gateways?        @relation(fields: [gatewayId], references: [id])
+  dataPedido    DateTime         @default(now())
+  dataPagamento DateTime?
+  tipoChave     String
+  chave         String
+  tipo          WithdrawalTipo
+  status        WithdrawalStatus
+  valor         Float
+  taxa          Float
+
+  @@index([userId])
+  @@index([status])
+  @@index([dataPedido])
+}
+
+model Gateways {
+  id                      Int         @id @default(autoincrement())
+  name                    String
+  provider                String      @default("custom")
+  endpoint                String
+  tokenPublico            String
+  tokenPrivado            String
+  split                   String?
+  splitValue              Float?
+  type                    GatewayType
+  isActive                Boolean     @default(true)
+  sortOrder               Int         @default(0)
+  deposits                Deposit[]
+  withdrawals             Withdrawal[]
+
+  // Relações inversas nomeadas para cada tipo de operação
+  pixDepositoConfigs      Config[]    @relation("PixDeposito")
+  pixSaqueConfigs         Config[]    @relation("PixSaque")
+  creditCardDeposits      Config[]    @relation("CreditCardDeposito")
+  cryptoDeposits          Config[]    @relation("CryptoDeposito")
+  cryptoSaques            Config[]    @relation("CryptoSaque")
+}
+
+
+model Config {
+  id                     Int       @id @default(autoincrement())
+  nomeSite               String    @default("Bincebroker")
+  urlSite                String    @default("https://app.bincebroker.com/")
+  logoUrlDark            String    @default("/nextbrokers.png")
+  logoUrlWhite           String    @default("/nextbrokers.png")
+  faviconUrl             String?
+  primaryColor           String    @default("#1ca06d")
+  primaryHoverColor      String    @default("#0b7250")
+  primaryGradientFrom    String    @default("#0b7250")
+  primaryGradientVia     String    @default("#1ca06d")
+  primaryGradientTo      String    @default("#3cd385")
+  buttonTextColor        String    @default("#ffffff")
+  backgroundColor        String    @default("#252b3b")
+  surfaceColor           String    @default("#364152")
+  surfaceAltColor        String    @default("#2a3441")
+  cardColor              String    @default("#1e293b")
+  borderColor            String    @default("#2a3441")
+  headerGradientFrom     String    @default("#1a1d29")
+  headerGradientTo       String    @default("#252b3b")
+  headerTextColor        String    @default("#ffffff")
+  mutedTextColor         String    @default("#a1a8b3")
+  authBackgroundColor    String    @default("#ffffff")
+  loadingBackgroundColor String    @default("#ffffff")
+  loadingTrackColor      String    @default("#d1d5db")
+  loadingGradientFrom    String    @default("#0b7250")
+  loadingGradientVia     String    @default("#1ca06d")
+  loadingGradientTo      String    @default("#3cd385")
+  successColor           String    @default("#16a34a")
+  dangerColor            String    @default("#dc2626")
+  textColor              String    @default("#ffffff")
+  iconColor              String    @default("#a1a8b3")
+  iconBgColor            String    @default("#364152")
+  positiveColor          String    @default("#22c55e")
+  negativeColor          String    @default("#ef4444")
+  cpaMin                 Float     @default(30)
+  cpaValor               Float     @default(15)
+  revShareFalsoValue     Float     @default(85)
+  revShareNegativo       Float?
+  revShareValue          Float     @default(35)
+  taxa                   Float     @default(10)
+  valorMinimoSaque       Float     @default(100)
+  valorMinimoDeposito    Float     @default(60)
+  postbackUrl            String?
+  depositGatewayMode     String    @default("manual")
+  withdrawGatewayMode    String    @default("manual")
+  lastPixDepositGatewayId Int?
+  lastPixWithdrawalGatewayId Int?
+  lastCreditDepositGatewayId Int?
+  lastCryptoDepositGatewayId Int?
+  lastCryptoWithdrawalGatewayId Int?
+  criadoEm               DateTime  @default(now())
+
+  // Novas referências específicas por tipo de gateway
+  gatewayPixDepositoId   Int?
+  gatewayPixSaqueId      Int?
+  creditCardDepositId    Int?
+  cryptoDepositId        Int?
+  cryptoSaqueId          Int?
+
+  // Relações
+  gatewayPixDeposito     Gateways? @relation("PixDeposito", fields: [gatewayPixDepositoId], references: [id])
+  gatewayPixSaque        Gateways? @relation("PixSaque", fields: [gatewayPixSaqueId], references: [id])
+  creditCardDeposit      Gateways? @relation("CreditCardDeposito", fields: [creditCardDepositId], references: [id])
+  cryptoDeposit          Gateways? @relation("CryptoDeposito", fields: [cryptoDepositId], references: [id])
+  cryptoSaque            Gateways? @relation("CryptoSaque", fields: [cryptoSaqueId], references: [id])
+}
+
+
+model AffiliateCommission {
+  id          String           @id @default(uuid())
+  affiliate   Affiliate        @relation(fields: [affiliateId], references: [id])
+  affiliateId String
+  user        User?            @relation(fields: [userId], references: [id])
+  userId      String?
+  deposit     Deposit?         @relation(fields: [depositId], references: [id])
+  depositId   String?
+  operation   TradeOperation?  @relation(fields: [operationId], references: [id])
+  operationId String?
+  tipo        TipoComissao
+  valor       Float
+  percentual  Float?
+  descricao   String?
+  data        DateTime         @default(now())
+  status      CommissionStatus @default(pendente)
+
+  @@unique([affiliateId, depositId, tipo])
+  @@unique([affiliateId, operationId, tipo])
+}
+
+model ClickEvent {
+  id          String    @id @default(uuid())
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  affiliateId String
+  url         String
+  data        DateTime  @default(now())
+}
+
+model PixelEvent {
+  id          String    @id @default(uuid())
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  affiliateId String
+  eventName   String
+  data        DateTime  @default(now())
+}
+
+model PostbackConfig {
+  id             String        @id @default(uuid())
+  affiliate      Affiliate?    @relation(fields: [affiliateId], references: [id])
+  affiliateId    String?
+  user           User?         @relation(fields: [userId], references: [id])
+  userId         String?
+  url            String
+  platform       Platform
+  active         Status        @default(ACTIVE)
+  conversionType String? // Tipo de conversão rastreada (ex.: "lead", "sale")
+  notes          String? // Notas adicionais
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  logs           PostbackLog[] @relation("PostbackLogs")
+
+  @@index([affiliateId])
+  @@index([userId])
+}
+
+model PostbackLog {
+  id               String         @id @default(uuid())
+  postbackConfig   PostbackConfig @relation("PostbackLogs", fields: [postbackConfigId], references: [id])
+  postbackConfigId String
+  affiliateId      String?
+  dispatchTime     DateTime       @default(now())
+  status           DispatchStatus
+  successRate      Float? // Taxa de sucesso (ex.: 0.95 para 95%)
+  responseCode     Int? // Código HTTP da resposta (ex.: 200, 404)
+  responseMessage  String? // Mensagem de resposta do servidor
+  payload          Json? // Dados enviados no postback
+  errorDetails     String? // Detalhes de erro, se houver
+
+  @@index([postbackConfigId])
+}
+
+model WebhookConfig {
+  id        String       @id @default(uuid())
+  user      User         @relation(fields: [userId], references: [id])
+  userId    String
+  url       String
+  eventType String // Tipo de evento (ex.: "deposit", "withdrawal")
+  active    Status       @default(ACTIVE)
+  notes     String? // Notas adicionais
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  logs      WebhookLog[] @relation("WebhookLogs")
+
+  @@index([userId])
+}
+
+model WebhookLog {
+  id              String         @id @default(uuid())
+  webhookConfig   WebhookConfig  @relation("WebhookLogs", fields: [webhookConfigId], references: [id])
+  webhookConfigId String
+  userId          String
+  dispatchTime    DateTime       @default(now())
+  status          DispatchStatus
+  responseCode    Int? // Código HTTP da resposta
+  responseMessage String? // Mensagem de resposta do servidor
+  payload         Json? // Dados enviados no webhook
+  errorDetails    String? // Detalhes de erro, se houver
+
+  @@index([webhookConfigId])
+}
+
+model TradeOperation {
+  id         String     @id @default(uuid())
+  user       User       @relation(fields: [userId], references: [id])
+  userId     String
+  pair       TradingPair? @relation(fields: [pairId], references: [id])
+  pairId     String?
+  tipo       String?
+  data       DateTime
+  ativo      String
+  tempo      String
+  previsao   String
+  vela       String
+  abertura   Float
+  fechamento Float?
+  valor      Float
+  estornado  Boolean    @default(false)
+  executado  Boolean    @default(false)
+  status     String
+  receita    Float      @default(0)
+  resultado  Resultado?
+  expiresAt  DateTime?
+  settlementJob OperationSettlementJob?
+  affiliateCommissions AffiliateCommission[]
+
+  @@index([userId])
+  @@index([data])
+  @@index([status])
+  @@index([ativo])
+  @@index([resultado, expiresAt])
+  @@index([userId, resultado])
+  @@index([pairId])
+}
+
+model OperationSettlementJob {
+  id           String              @id @default(uuid())
+  operationId  String              @unique
+  operation    TradeOperation      @relation(fields: [operationId], references: [id])
+  status       SettlementJobStatus @default(pending)
+  scheduledFor DateTime
+  startedAt    DateTime?
+  processedAt  DateTime?
+  attempts     Int                 @default(0)
+  lastError    String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([status, scheduledFor])
+}
+
+model UserLog {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  acao      String
+  descricao String
+  ip        String
+  userAgent String
+  createdAt DateTime @default(now())
+}
+
+model UserActivity {
+  id           String   @id @default(uuid())
+  userId       String
+  activityType String
+  device       String
+  ipAddress    String
+  location     String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id             String        @id @default(uuid())
+  user           User?         @relation(fields: [userId], references: [id])
+  userId         String?
+  entidade       String
+  entidadeId     String
+  acao           AcaoAuditoria
+  valoresAntigos Json?
+  valoresNovos   Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([entidade])
+}
+
+model Admin {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  senha       String
+  nome        String
+  telefone    String?
+  dataCriacao DateTime @default(now())
+  nivel       Role
+}

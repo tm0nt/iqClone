@@ -1,0 +1,115 @@
+# =====================================================================
+#  Muniz Platform — docker compose up  (trading + afiliados + admin)
+# =====================================================================
+#
+#  1. Copy .env.example → .env and fill in your values
+#  2. docker compose up -d --build
+#
+#  Caddy handles HTTPS certificates automatically via Let's Encrypt.
+#  The trading service runs Prisma migrations + seed on startup.
+# =====================================================================
+
+services:
+  # =================== PostgreSQL ===================
+  db:
+    image: postgres:16-alpine
+    container_name: muniz-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # =================== Trading ===================
+  # Runs Prisma migrate deploy + seed on every startup (idempotent).
+  # Must start FIRST so the DB schema exists for afiliados / admin.
+  trading:
+    build:
+      context: .
+      dockerfile: trading/Dockerfile
+    container_name: muniz-trading
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public"
+      NODE_ENV: production
+      AUTH_TRUST_HOST: "true"
+      SITE_DOMAIN: ${SITE_DOMAIN}
+      SITE_NAME: ${SITE_NAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TIINGO_API_KEY: ${TIINGO_API_KEY:-}
+    expose:
+      - "3000"
+
+  # =================== Afiliados ===================
+  afiliados:
+    build:
+      context: .
+      dockerfile: afiliados/Dockerfile
+    container_name: muniz-afiliados
+    restart: unless-stopped
+    depends_on:
+      trading:
+        condition: service_started
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      NODE_ENV: production
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      NEXT_PUBLIC_ADMIN_URL: "https://${ADMIN_DOMAIN}"
+    expose:
+      - "3000"
+
+  # =================== Admin ===================
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    container_name: muniz-admin
+    restart: unless-stopped
+    depends_on:
+      trading:
+        condition: service_started
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      NODE_ENV: production
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    expose:
+      - "1313"
+
+  # =================== Caddy (reverse proxy + auto SSL) ===================
+  caddy:
+    image: caddy:2-alpine
+    container_name: muniz-caddy
+    restart: unless-stopped
+    depends_on:
+      - trading
+      - afiliados
+      - admin
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      TRADING_DOMAIN: ${TRADING_DOMAIN}
+      AFILIADOS_DOMAIN: ${AFILIADOS_DOMAIN}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # TLS certificates
+      - caddy_config:/config      # Caddy runtime config
+
+volumes:
+  pg_data:
+  caddy_data:
+  caddy_config:

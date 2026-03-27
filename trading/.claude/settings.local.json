@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /home/montenegro/Documentos/muniz -name *.md -type f)",
+      "Bash(grep -roh \"#[0-9a-fA-F]\\\\{3,6\\\\}\\\\|rgb\\([^\\)]*\\)\\\\|rgba\\([^\\)]*\\)\\\\|hsl\\([^\\)]*\\)\\\\|hsla\\([^\\)]*\\)\" /home/montenegro/Documentos/muniz/trading/components /home/montenegro/Documentos/muniz/trading/app/[locale]/globals.css)",
+      "Bash(grep -r \"contrast\\\\|WCAG\\\\|a11y\\\\|accessibility\" /home/montenegro/Documentos/muniz/trading --include=*.tsx --include=*.ts --include=*.md)",
+      "Bash(grep -r \"getTextColor\\\\|adaptiveText\\\\|contrast\\\\|luminance\" /home/montenegro/Documentos/muniz --include=*.ts --include=*.tsx)",
+      "Bash(find /home/montenegro/Documentos/muniz -type f -name \"tailwind.config.ts\" -not -path \"*/node_modules/*\" -exec head -50 {} +)",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(sed -i -e 's/text-slate-500/text-platform-overlay-muted/g' -e 's/text-slate-400/text-platform-overlay-muted/g' -e 's/text-slate-300/text-platform-muted/g' -e 's/text-slate-200/text-platform-text\\\\/80/g' -e 's/text-emerald-400/text-platform-positive/g' -e 's/text-emerald-500/text-platform-positive/g' -e 's/text-emerald-600/text-platform-positive/g' -e 's/text-green-500/text-platform-positive/g' -e 's/text-green-600/text-platform-positive/g' -e 's/text-red-400/text-platform-danger/g' -e 's/text-red-500/text-platform-danger/g' -e 's/text-red-600/text-platform-danger/g' -e 's/text-amber-500/text-platform-warning/g' -e 's/text-amber-600/text-platform-warning/g' -e 's/text-blue-500/text-platform-info/g' -e 's/text-blue-600/text-platform-info/g' -e 's/text-orange-400/text-platform-demo/g' -e 's/text-orange-500/text-platform-demo/g' -e 's/text-gray-400/text-platform-overlay-muted/g' -e 's/text-gray-500/text-platform-overlay-muted/g' -e 's/text-gray-600/text-platform-overlay-muted/g' -e 's/text-gray-300/text-platform-muted/g' -e 's/text-yellow-400/text-platform-warning/g' -e 's/text-white/text-platform-text/g' \"$f\")",
+      "Bash(done)",
+      "Bash(sed -i 's/className=\"\"w-full flex items-center justify-between py-3 px-4 bg-transparent border border-platform-overlay-border\\\\/30 text-platform-text rounded-xl transition-colors duration-300 focus:outline-none focus:border-platform-positive\\\\/50\"\"/className=\"\"w-full flex items-center justify-between py-3 px-4 bg-platform-overlay-surface\\\\/40 text-platform-text rounded-xl transition-colors duration-300 focus:outline-none\"\"/g' /home/montenegro/Documentos/muniz/trading/components/account-sections/sacar.tsx)",
+      "Bash(__NEW_LINE_4b781850a9b0e959__ sed:*)"
+    ]
+  }
+}

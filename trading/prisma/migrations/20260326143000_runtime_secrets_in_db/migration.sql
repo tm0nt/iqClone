@@ -1,0 +1,9 @@
+ALTER TABLE "Config"
+ADD COLUMN IF NOT EXISTS "authSecret" TEXT,
+ADD COLUMN IF NOT EXISTS "adminSessionSecret" TEXT,
+ADD COLUMN IF NOT EXISTS "settleSecret" TEXT,
+ADD COLUMN IF NOT EXISTS "googleClientId" TEXT,
+ADD COLUMN IF NOT EXISTS "googleClientSecret" TEXT;
+
+ALTER TABLE "MarketDataProvider"
+ADD COLUMN IF NOT EXISTS "authToken" TEXT;

@@ -1,0 +1,13 @@
+{
+  "title": "Panel",
+  "overview": "Resumen de sus análisis y rendimiento",
+  "loading": "Cargando...",
+  "totalDeposits": "Depósitos Totales",
+  "comparedLastMonth": "comparado con el mes pasado",
+  "totalWithdrawals": "Retiros Totales",
+  "registeredClients": "Clientes Registrados",
+  "pendingWithdrawals": "Retiros Pendientes",
+  "requestsAwaiting": "solicitudes pendientes de aprobación",
+  "financialOverview": "Resumen Financiero",
+  "annualPerformance": "Rendimiento anual y distribución de depósitos"
+}

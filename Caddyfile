@@ -1,0 +1,23 @@
+# ==========================================
+#  Caddy — reverse proxy with automatic SSL
+# ==========================================
+# Domains are read from env vars set in docker-compose.
+# Caddy auto-provisions Let's Encrypt certificates for each.
+
+# ---------- Trading ----------
+{$TRADING_DOMAIN} {
+	reverse_proxy trading:3000
+	encode gzip zstd
+}
+
+# ---------- Afiliados ----------
+{$AFILIADOS_DOMAIN} {
+	reverse_proxy afiliados:3000
+	encode gzip zstd
+}
+
+# ---------- Admin ----------
+{$ADMIN_DOMAIN} {
+	reverse_proxy admin:1313
+	encode gzip zstd
+}

@@ -1,0 +1,9 @@
+FROM postgres:latest
+
+# Defina variáveis de ambiente para o usuário, senha e banco de dados (opcional, mas recomendado)
+ENV POSTGRES_USER=brx
+ENV POSTGRES_PASSWORD=brx
+ENV POSTGRES_DB=trading
+
+# Exponha a porta padrão do PostgreSQL
+EXPOSE 5432

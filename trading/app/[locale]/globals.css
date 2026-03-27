@@ -1,0 +1,1393 @@
+/* Substituir as variáveis CSS e as sobreposições para uma abordagem mais direta */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 18, 18, 18;
+  --platform-primary-color: #1ca06d;
+  --platform-primary-hover-color: #0b7250;
+  --platform-accent-color: #3b82f6;
+  --platform-warning-color: #f59e0b;
+  --platform-demo-color: #f97316;
+  --platform-demo-hover-color: #ea580c;
+  --platform-primary-gradient-from: #0b7250;
+  --platform-primary-gradient-via: #1ca06d;
+  --platform-primary-gradient-to: #3cd385;
+  --platform-button-text-color: #ffffff;
+  --platform-background-color: #252b3b;
+  --platform-surface-color: #364152;
+  --platform-surface-alt-color: #2a3441;
+  --platform-card-color: #1e293b;
+  --platform-border-color: #2a3441;
+  --platform-overlay-backdrop-color: #0f172a;
+  --platform-overlay-surface-color: #1e293b;
+  --platform-overlay-border-color: #334155;
+  --platform-overlay-card-color: #334155;
+  --platform-overlay-hover-color: #3a4551;
+  --platform-overlay-muted-text-color: #94a3b8;
+  --platform-header-gradient-from: #1a1d29;
+  --platform-header-gradient-to: #252b3b;
+  --platform-header-text-color: #ffffff;
+  --platform-muted-text-color: #a1a8b3;
+  --platform-auth-background-color: #ffffff;
+  --platform-input-background-color: #1a1a1a;
+  --platform-input-border-color: #2a2a2a;
+  --platform-input-label-color: #999999;
+  --platform-input-subtle-text-color: #666666;
+  --platform-loading-background-color: #ffffff;
+  --platform-loading-track-color: #d1d5db;
+  --platform-loading-gradient-from: #0b7250;
+  --platform-loading-gradient-via: #1ca06d;
+  --platform-loading-gradient-to: #3cd385;
+  --platform-success-color: #16a34a;
+  --platform-danger-color: #dc2626;
+  --platform-text-color: #ffffff;
+  --platform-icon-color: #a1a8b3;
+  --platform-icon-bg-color: #364152;
+  --platform-positive-color: #22c55e;
+  --platform-negative-color: #ef4444;
+  --platform-chart-price-tag-color: #d88a31;
+  --platform-background-foreground-color: #ffffff;
+  --platform-background-muted-foreground-color: #a1a8b3;
+  --platform-surface-foreground-color: #ffffff;
+  --platform-surface-muted-foreground-color: #a1a8b3;
+  --platform-surface-alt-foreground-color: #ffffff;
+  --platform-surface-alt-muted-foreground-color: #a1a8b3;
+  --platform-card-foreground-color: #ffffff;
+  --platform-card-muted-foreground-color: #a1a8b3;
+  --platform-overlay-surface-foreground-color: #ffffff;
+  --platform-overlay-surface-muted-foreground-color: #94a3b8;
+  --platform-overlay-card-foreground-color: #ffffff;
+  --platform-overlay-card-muted-foreground-color: #94a3b8;
+  --platform-input-foreground-color: #ffffff;
+  --platform-input-muted-foreground-color: #999999;
+  --platform-primary-foreground-color: #ffffff;
+  --platform-success-foreground-color: #ffffff;
+  --platform-danger-foreground-color: #ffffff;
+  --platform-warning-foreground-color: #111827;
+  --platform-demo-foreground-color: #ffffff;
+  --platform-info-color: #3b82f6;
+  --platform-candle-up-color: #00ab34;
+  --platform-candle-down-color: #d21a2a;
+  --platform-chart-grid-color: #666666;
+  --platform-chart-deep-background-color: #060b12;
+  --platform-chart-surface-color: #1d2736;
+  --platform-chart-surface-alt-color: #16202e;
+}
+
+.light {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+
+  /* Light mode overrides */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f0f2f5;
+  --border-color: #e0e0e0;
+  --text-muted: #666666;
+  --text-primary: #000000;
+  --card-bg: #ffffff;
+  --dropdown-bg: #f8f9fa;
+  --hover-bg: #e9ecef;
+  --progress-bg: #dddddd;
+}
+
+.dark {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 18, 18, 18;
+
+  /* Dark mode overrides */
+  --bg-primary: color-mix(
+    in srgb,
+    var(--platform-overlay-surface-color) 60%,
+    black
+  );
+  --bg-secondary: var(--platform-overlay-surface-color);
+  --bg-tertiary: var(--platform-input-background-color);
+  --border-color: var(--platform-input-border-color);
+  --text-muted: var(--platform-input-label-color);
+  --text-primary: var(--platform-header-text-color);
+  --card-bg: var(--platform-card-color);
+  --dropdown-bg: var(--platform-overlay-surface-color);
+  --hover-bg: var(--platform-overlay-hover-color);
+  --progress-bg: color-mix(in srgb, var(--platform-border-color) 82%, black);
+}
+
+body {
+  color: var(--platform-background-foreground-color);
+  background-color: var(--platform-background-color);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.platform-body {
+  background-color: var(--platform-background-color);
+}
+
+.platform-main-bg {
+  background-color: var(--platform-background-color);
+}
+
+.platform-header {
+  background: linear-gradient(
+    180deg,
+    var(--platform-header-gradient-from),
+    var(--platform-header-gradient-to)
+  );
+  color: var(--platform-header-text-color);
+}
+
+.platform-auth-bg {
+  background-color: var(--platform-auth-background-color);
+}
+
+.platform-loading-bg {
+  background-color: var(--platform-loading-background-color);
+}
+
+.platform-progress-track {
+  background-color: var(--platform-loading-track-color);
+}
+
+.platform-progress-fill {
+  background: linear-gradient(
+    90deg,
+    var(--platform-loading-gradient-from),
+    var(--platform-loading-gradient-via),
+    var(--platform-loading-gradient-to)
+  );
+}
+
+.platform-primary-button {
+  color: var(--platform-button-text-color);
+  background: linear-gradient(
+    90deg,
+    var(--platform-primary-gradient-from),
+    var(--platform-primary-gradient-via),
+    var(--platform-primary-gradient-to)
+  );
+}
+
+.platform-outline-button {
+  border: 1px solid var(--platform-primary-color);
+  color: var(--platform-primary-color);
+  background: transparent;
+}
+
+.platform-outline-button:hover,
+.platform-outline-button:active {
+  background: var(--platform-primary-color);
+  color: #000000;
+  border-color: var(--platform-primary-color);
+}
+
+.platform-muted {
+  color: var(--platform-muted-text-color);
+}
+
+.platform-surface-panel {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-surface-alt-color) 42%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--platform-border-color) 48%, transparent);
+  color: var(--platform-surface-foreground-color);
+}
+
+.platform-surface-muted {
+  color: var(--platform-surface-muted-foreground-color);
+}
+
+.platform-input-surface {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-input-background-color) 88%,
+    transparent
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--platform-input-border-color) 82%,
+    transparent
+  );
+  color: var(--platform-input-foreground-color);
+}
+
+.account-native-field {
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.9rem;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.account-native-field:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.account-native-field:focus {
+  outline: none;
+  background-color: #050505;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.account-native-field::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.account-native-field option {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+input.account-native-field[type="date"] {
+  color-scheme: dark;
+}
+
+input.account-native-field[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+/* Aplicar variáveis CSS aos elementos comuns */
+.bg-\[\#121212\] {
+  background-color: var(--bg-secondary);
+}
+
+.bg-\[\#252b3b\] {
+  background-color: var(--platform-background-color) !important;
+}
+
+.bg-\[\#364152\] {
+  background-color: var(--platform-surface-color) !important;
+}
+
+.bg-\[\#2a3441\] {
+  background-color: var(--platform-surface-alt-color) !important;
+}
+
+.bg-\[\#1e293b\] {
+  background-color: var(--platform-overlay-surface-color) !important;
+}
+
+.bg-\[\#1a1a1a\] {
+  background-color: var(--bg-tertiary);
+}
+
+.bg-\[\#0a0a0a\] {
+  background-color: var(--bg-primary);
+}
+
+.border-\[\#2a2a2a\] {
+  border-color: var(--border-color);
+}
+
+.border-\[\#2a3441\] {
+  border-color: var(--platform-border-color) !important;
+}
+
+.text-\[\#999\] {
+  color: var(--text-muted);
+}
+
+.text-\[\#a1a8b3\] {
+  color: var(--platform-muted-text-color) !important;
+}
+
+.text-white {
+  color: var(--platform-background-foreground-color);
+}
+
+.text-slate-300 {
+  color: color-mix(
+    in srgb,
+    var(--platform-surface-foreground-color) 88%,
+    transparent
+  ) !important;
+}
+
+.text-slate-400 {
+  color: var(--platform-surface-muted-foreground-color) !important;
+}
+
+.text-slate-500 {
+  color: color-mix(
+    in srgb,
+    var(--platform-surface-muted-foreground-color) 82%,
+    transparent
+  ) !important;
+}
+
+.text-emerald-300,
+.text-emerald-400,
+.text-emerald-500 {
+  color: var(--platform-success-color) !important;
+}
+
+.text-red-400,
+.text-red-500 {
+  color: var(--platform-danger-color) !important;
+}
+
+.text-yellow-400,
+.text-amber-400 {
+  color: var(--platform-warning-color) !important;
+}
+
+.bg-slate-700\/30 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-surface-alt-color) 30%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-700\/50 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-surface-alt-color) 50%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-800\/50 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-surface-color) 50%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-800\/90 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-surface-color) 90%,
+    transparent
+  ) !important;
+}
+
+.border-slate-600\/30 {
+  border-color: color-mix(
+    in srgb,
+    var(--platform-border-color) 30%,
+    transparent
+  ) !important;
+}
+
+.border-slate-600\/50 {
+  border-color: color-mix(
+    in srgb,
+    var(--platform-border-color) 50%,
+    transparent
+  ) !important;
+}
+
+.hover\:bg-slate-700\/30:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-hover-color) 30%,
+    transparent
+  ) !important;
+}
+
+.hover\:bg-slate-700\/50:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-hover-color) 50%,
+    transparent
+  ) !important;
+}
+
+.bg-\[\#1e2c38\] {
+  background-color: var(--bg-tertiary);
+}
+
+.bg-\[\#151515\] {
+  background-color: var(--platform-overlay-surface-color);
+}
+
+.hover\:bg-\[\#1a1a1a\]:hover {
+  background-color: var(--hover-bg);
+}
+
+.hover\:bg-\[\#222\]:hover {
+  background-color: var(--hover-bg);
+}
+
+/* Corrigir a cor de fundo da barra de progresso */
+.bg-\[\#333\] {
+  background-color: var(--progress-bg) !important;
+}
+
+/* Gradientes */
+.from-\[\#151515\] {
+  --tw-gradient-from: var(--dropdown-bg);
+}
+
+.from-\[\#1a1d29\] {
+  --tw-gradient-from: var(--platform-header-gradient-from) !important;
+}
+
+.to-\[\#252b3b\] {
+  --tw-gradient-to: var(--platform-header-gradient-to) !important;
+}
+
+.from-\[\#0b7250\] {
+  --tw-gradient-from: var(--platform-primary-gradient-from) !important;
+}
+
+.via-\[\#1ca06d\] {
+  --tw-gradient-stops:
+    var(--tw-gradient-from), var(--platform-primary-gradient-via),
+    var(--tw-gradient-to) !important;
+}
+
+.to-\[\#3cd385\] {
+  --tw-gradient-to: var(--platform-primary-gradient-to) !important;
+}
+
+.from-emerald-600 {
+  --tw-gradient-from: var(--platform-primary-gradient-from) !important;
+}
+
+.to-emerald-500 {
+  --tw-gradient-to: var(--platform-primary-gradient-to) !important;
+}
+
+.bg-emerald-600,
+.bg-\[\#16a34a\],
+.bg-green-600 {
+  background-color: var(--platform-success-color) !important;
+}
+
+.hover\:bg-emerald-700:hover,
+.hover\:bg-\[\#15803d\]:hover,
+.hover\:bg-green-700:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-success-color) 88%,
+    black
+  ) !important;
+}
+
+/* Hex green codes used in mobile-trading-panel and trading-panel */
+.text-\[\#22c55e\] {
+  color: var(--platform-success-color) !important;
+}
+
+.from-\[\#22c55e\] {
+  --tw-gradient-from: var(--platform-success-color) !important;
+}
+
+.to-\[\#16a34a\] {
+  --tw-gradient-to: var(--platform-success-color) !important;
+}
+
+.focus\:border-\[\#22c55e\]:focus {
+  border-color: var(--platform-success-color) !important;
+}
+
+.focus\:shadow-\[\#22c55e\]\/20:focus {
+  --tw-shadow-color: var(--platform-success-color) !important;
+}
+
+.hover\:shadow-\[\#22c55e\]\/20:hover {
+  --tw-shadow-color: var(--platform-success-color) !important;
+}
+
+.bg-\[\#22c55e\] {
+  background-color: var(--platform-success-color) !important;
+}
+
+.text-emerald-200 {
+  color: color-mix(
+    in srgb,
+    var(--platform-primary-color) 60%,
+    white
+  ) !important;
+}
+
+.bg-emerald-600\/20 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-primary-color) 20%,
+    transparent
+  ) !important;
+}
+
+.bg-\[\#dc2626\],
+.bg-red-600 {
+  background-color: var(--platform-danger-color) !important;
+}
+
+.hover\:bg-\[\#b91c1c\]:hover,
+.hover\:bg-red-700:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-danger-color) 88%,
+    black
+  ) !important;
+}
+
+.text-emerald-400,
+.text-emerald-500,
+.text-green-400,
+.text-green-500,
+.text-green-600,
+.border-green-600 {
+  color: var(--platform-primary-color) !important;
+  border-color: var(--platform-primary-color) !important;
+}
+
+.text-red-400,
+.text-red-500 {
+  color: var(--platform-danger-color) !important;
+}
+
+/* rgb(1,219,151) — hardcoded primary green used across components */
+.text-\[rgb\(1\,219\,151\)\] {
+  color: var(--platform-primary-color) !important;
+}
+
+.bg-\[rgb\(1\,219\,151\)\] {
+  background-color: var(--platform-primary-color) !important;
+}
+
+.hover\:bg-\[rgb\(0\,199\,131\)\]:hover {
+  background-color: var(--platform-primary-hover-color) !important;
+}
+
+.hover\:text-\[rgb\(0\,199\,131\)\]:hover {
+  color: var(--platform-primary-hover-color) !important;
+}
+
+.border-\[rgb\(1\,219\,151\)\] {
+  border-color: var(--platform-primary-color) !important;
+}
+
+.focus\:border-\[rgb\(1\,219\,151\)\]\/70:focus,
+.group-focus-within\:border-\[rgb\(1\,219\,151\)\]\/70 {
+  border-color: var(--platform-primary-color) !important;
+}
+
+.group-focus-within\:text-\[rgb\(1\,219\,151\)\] {
+  color: var(--platform-primary-color) !important;
+}
+
+/* rgb(1,219,151) backgrounds with opacity */
+.bg-\[rgba\(1\,219\,151\,0\.1\)\] {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-primary-color) 10%,
+    transparent
+  ) !important;
+}
+
+.bg-\[rgba\(1\,219\,151\,0\.2\)\] {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-primary-color) 20%,
+    transparent
+  ) !important;
+}
+
+/* rgb(204,2,77) — hardcoded danger/sell color */
+.text-\[rgb\(204\,2\,77\)\] {
+  color: var(--platform-danger-color) !important;
+}
+
+.bg-\[rgb\(204\,2\,77\)\] {
+  background-color: var(--platform-danger-color) !important;
+}
+
+.hover\:bg-\[rgb\(180\,2\,70\)\]:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-danger-color) 88%,
+    black
+  ) !important;
+}
+
+.border-\[rgb\(204\,2\,77\)\] {
+  border-color: var(--platform-danger-color) !important;
+}
+
+/* rgb(8,134,90) — hardcoded buy button green */
+.bg-\[rgb\(8\,134\,90\)\] {
+  background-color: var(--platform-primary-color) !important;
+}
+
+.hover\:bg-\[rgb\(7\,115\,77\)\]:hover {
+  background-color: var(--platform-primary-hover-color) !important;
+}
+
+/* emerald-500 variants with opacity */
+.bg-emerald-500\/10,
+.bg-emerald-400\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-primary-color) 10%,
+    transparent
+  ) !important;
+}
+
+.bg-emerald-500\/20 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-primary-color) 20%,
+    transparent
+  ) !important;
+}
+
+.bg-emerald-500 {
+  background-color: var(--platform-primary-color) !important;
+}
+
+.border-emerald-500\/50,
+.border-emerald-500\/30,
+.border-emerald-300 {
+  border-color: var(--platform-primary-color) !important;
+}
+
+/* red variants with opacity */
+.bg-red-500\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-danger-color) 10%,
+    transparent
+  ) !important;
+}
+
+.bg-red-500\/20 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-danger-color) 20%,
+    transparent
+  ) !important;
+}
+
+/* Other hardcoded hex greens */
+.text-\[\#00cc88\] {
+  color: var(--platform-primary-color) !important;
+}
+
+.bg-\[\#00cc88\] {
+  background-color: var(--platform-primary-color) !important;
+}
+
+/* group-hover variants */
+.group-hover\:text-emerald-400:hover,
+.group:hover .group-hover\:text-emerald-400 {
+  color: var(--platform-primary-color) !important;
+}
+
+.group-hover\:bg-emerald-400\/10,
+.group:hover .group-hover\:bg-emerald-400\/10,
+.group-hover\:bg-emerald-500\/10,
+.group:hover .group-hover\:bg-emerald-500\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-primary-color) 10%,
+    transparent
+  ) !important;
+}
+
+.hover\:text-emerald-400:hover {
+  color: var(--platform-primary-color) !important;
+}
+
+.hover\:text-red-400:hover,
+.hover\:text-red-300:hover {
+  color: var(--platform-danger-color) !important;
+}
+
+/* active operation status color */
+.border-t-\[rgb\(1\,219\,151\)\] {
+  border-top-color: var(--platform-primary-color) !important;
+}
+
+.h-full.bg-\[rgb\(1\,219\,151\)\] {
+  background-color: var(--platform-primary-color) !important;
+}
+
+.focus\:border-emerald-500\/50:focus,
+.focus\:border-\[rgb\(1\,219\,151\)\]:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--platform-primary-color) !important;
+}
+
+.focus\:ring-emerald-500\/50:focus {
+  --tw-ring-color: color-mix(
+    in srgb,
+    var(--platform-primary-color) 50%,
+    transparent
+  ) !important;
+}
+
+.border-b-emerald-500 {
+  border-bottom-color: var(--platform-primary-color) !important;
+}
+
+.bg-orange-600,
+.bg-orange-500 {
+  background-color: var(--platform-demo-color) !important;
+}
+
+.hover\:bg-orange-700:hover,
+.hover\:bg-orange-600:hover {
+  background-color: var(--platform-demo-hover-color) !important;
+}
+
+.text-orange-400,
+.text-orange-500,
+.text-orange-600 {
+  color: var(--platform-demo-color) !important;
+}
+
+.border-orange-500\/50,
+.border-amber-500\/30 {
+  border-color: var(--platform-demo-color) !important;
+}
+
+.bg-orange-500\/10,
+.bg-amber-500\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-demo-color) 10%,
+    transparent
+  ) !important;
+}
+
+.bg-orange-500\/20,
+.bg-amber-500\/20 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-demo-color) 20%,
+    transparent
+  ) !important;
+}
+
+.shadow-orange-500\/25,
+.hover\:shadow-orange-500\/25:hover {
+  --tw-shadow-color: var(--platform-demo-color) !important;
+}
+
+.shadow-emerald-500\/25,
+.hover\:shadow-emerald-500\/25:hover {
+  --tw-shadow-color: var(--platform-primary-color) !important;
+}
+
+.group-hover\:text-orange-400:hover,
+.group:hover .group-hover\:text-orange-400 {
+  color: var(--platform-demo-color) !important;
+}
+
+.group-hover\:bg-orange-500\/10,
+.group:hover .group-hover\:bg-orange-500\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-demo-color) 10%,
+    transparent
+  ) !important;
+}
+
+.text-yellow-400,
+.text-amber-400,
+.text-amber-500 {
+  color: var(--platform-warning-color) !important;
+}
+
+.fill-yellow-400 {
+  fill: var(--platform-warning-color) !important;
+}
+
+.bg-slate-900\/95,
+.bg-slate-900\/90,
+.bg-slate-900\/80 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-backdrop-color) 95%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-800\/90 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-surface-color) 90%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-800\/60 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-surface-color) 60%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-800\/50 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-surface-color) 50%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-700,
+.bg-\[\#334155\] {
+  background-color: var(--platform-overlay-card-color) !important;
+}
+
+.bg-slate-700\/30 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-card-color) 30%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-700\/50 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-card-color) 50%,
+    transparent
+  ) !important;
+}
+
+.bg-slate-600\/50 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-border-color) 50%,
+    transparent
+  ) !important;
+}
+
+.bg-\[\#3a3d4a\] {
+  background-color: var(--platform-overlay-hover-color) !important;
+}
+
+.border-\[\#334155\] {
+  border-color: var(--platform-overlay-border-color) !important;
+}
+
+.border-\[\#3a3d4a\] {
+  border-color: var(--platform-overlay-hover-color) !important;
+}
+
+.border-\[\#3a4551\] {
+  border-color: var(--platform-overlay-hover-color) !important;
+}
+
+.border-slate-600\/50,
+.border-slate-600\/30 {
+  border-color: color-mix(
+    in srgb,
+    var(--platform-overlay-border-color) 72%,
+    transparent
+  ) !important;
+}
+
+.hover\:border-\[\#4a4d5a\]:hover,
+.hover\:border-slate-500\/50:hover {
+  border-color: var(--platform-overlay-hover-color) !important;
+}
+
+.hover\:bg-\[\#3a4551\]:hover,
+.hover\:bg-\[\#3a3d4a\]:hover {
+  background-color: var(--platform-overlay-hover-color) !important;
+}
+
+.hover\:bg-slate-700:hover,
+.hover\:bg-slate-700\/70:hover,
+.hover\:bg-slate-700\/50:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-hover-color) 82%,
+    transparent
+  ) !important;
+}
+
+.hover\:bg-slate-600:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-overlay-hover-color) 92%,
+    white 8%
+  ) !important;
+}
+
+.text-slate-400,
+.text-slate-300 {
+  color: var(--platform-overlay-muted-text-color) !important;
+}
+
+.placeholder-slate-400::placeholder {
+  color: var(--platform-overlay-muted-text-color) !important;
+}
+
+.bg-\[\#1a1a1a\]\/80 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-input-background-color) 80%,
+    transparent
+  ) !important;
+}
+
+.border-\[\#2a2a2a\]\/80 {
+  border-color: color-mix(
+    in srgb,
+    var(--platform-input-border-color) 80%,
+    transparent
+  ) !important;
+}
+
+.focus\:shadow-\[0_0_15px_rgba\(1\,219\,151\,0\.15\)\]:focus {
+  box-shadow: 0 0 15px
+    color-mix(in srgb, var(--platform-primary-color) 15%, transparent) !important;
+}
+
+.hover\:shadow-\[\#4a5563\]\/20:hover {
+  --tw-shadow-color: var(--platform-overlay-card-color) !important;
+}
+
+.bg-black {
+  background-color: var(--platform-background-color) !important;
+}
+
+.bg-gray-800 {
+  background-color: var(--platform-surface-alt-color) !important;
+}
+
+.bg-gray-700 {
+  background-color: color-mix(
+    in srgb,
+    var(--platform-surface-alt-color) 85%,
+    white 15%
+  ) !important;
+}
+
+.bg-gray-600 {
+  background-color: var(--platform-icon-bg-color) !important;
+}
+
+.border-gray-800,
+.border-gray-600 {
+  border-color: var(--platform-border-color) !important;
+}
+
+.text-gray-500,
+.text-gray-400 {
+  color: var(--platform-muted-text-color) !important;
+}
+
+.hover\:bg-gray-500:hover {
+  background-color: var(--platform-overlay-hover-color) !important;
+}
+
+.to-\[\#121212\] {
+  --tw-gradient-to: var(--bg-secondary);
+}
+
+.to-\[\#0c0c0c\] {
+  --tw-gradient-to: var(--bg-tertiary);
+}
+
+.from-\[\#121212\] {
+  --tw-gradient-from: var(--bg-secondary);
+}
+
+.to-\[\#0a0a0a\] {
+  --tw-gradient-to: var(--bg-primary);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.2);
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-trading-view {
+    height: calc(100vh - 60px - 320px);
+  }
+}
+
+/* Scrollbar personalizada */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Para Firefox */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+/* Animações para o modal */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Theme transition */
+.theme-transition {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* CORREÇÕES ESPECÍFICAS PARA O MODO CLARO */
+
+/* Garantir que os botões COMPRA/VENDA tenham texto branco em ambos os modos */
+.bg-\[rgb\(8\,134\,90\)\],
+.bg-\[rgb\(204\,2\,77\)\],
+.hover\:bg-\[rgb\(7\,115\,77\)\]:hover,
+.hover\:bg-\[rgb\(180\,2\,70\)\]:hover,
+.buy-button,
+.sell-button {
+  color: white !important;
+}
+
+/* Garantir que o texto dentro dos botões COMPRA/VENDA seja branco */
+.bg-\[rgb\(8\,134\,90\)\] span,
+.bg-\[rgb\(204\,2\,77\)\] span,
+.hover\:bg-\[rgb\(7\,115\,77\)\]:hover span,
+.hover\:bg-\[rgb\(180\,2\,70\)\]:hover span,
+button:has(span:contains("COMPRA")) span,
+button:has(span:contains("VENDA")) span,
+.buy-button span,
+.sell-button span {
+  color: white !important;
+}
+
+/* Garantir que os textos COMPRA e VENDA sejam SEMPRE brancos */
+.buy-button span,
+.sell-button span,
+button.bg-\[rgb\(8\,134\,90\)\] span,
+button.bg-\[rgb\(204\,2\,77\)\] span,
+button:has(span:contains("COMPRA")) span,
+button:has(span:contains("VENDA")) span,
+.light .buy-button span,
+.light .sell-button span,
+.light button.bg-\[rgb\(8\,134\,90\)\] span,
+.light button.bg-\[rgb\(204\,2\,77\)\] span {
+  color: white !important;
+}
+
+.light button[class*="bg-[rgb(8,134,90)"] span,
+.light button[class*="bg-[rgb(204,2,77)"] span,
+.light button.buy-button span,
+.light button.sell-button span {
+  color: white !important;
+}
+
+html.light button.buy-button span,
+html.light button.sell-button span,
+html.light button[class*="bg-[rgb(8,134,90)"] span,
+html.light button[class*="bg-[rgb(204,2,77)"] span {
+  color: white !important;
+}
+
+.bg-\[rgb\(8\,134\,90\)\] svg,
+.bg-\[rgb\(204\,2\,77\)\] svg,
+.hover\:bg-\[rgb\(7\,115\,77\)\]:hover svg,
+.hover\:bg-\[rgb\(180\,2\,70\)\]:hover svg,
+button:has(span:contains("COMPRA")) svg,
+button:has(span:contains("VENDA")) svg,
+.buy-button svg,
+.sell-button svg {
+  color: white !important;
+}
+
+.bg-\[rgb\(8\,134\,90\)\] .text-white,
+header a.bg-\[rgb\(8\,134\,90\)\] svg,
+.bg-\[rgb\(8\,134\,90\)\].p-1\.5 svg,
+a.bg-\[rgb\(8\,134\,90\)\] svg,
+button.bg-\[rgb\(8\,134\,90\)\] svg,
+.wallet-button svg {
+  color: white !important;
+}
+
+.light .hover\:bg-\[\#1a2530\]:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.light button.hover\:bg-\[\#222\]:hover,
+.light a.hover\:bg-\[\#222\]:hover,
+.light .hover\:bg-\[\#1a1a1a\]:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  transition: background-color 0.2s ease;
+}
+
+.light .profile-icon {
+  background-color: white !important;
+  border: 1px solid #e0e0e0;
+}
+
+.light .profile-icon svg {
+  color: black !important;
+}
+
+.light .dropdown-icon svg {
+  color: white !important;
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+.light
+  .w-full.flex.items-center.justify-between.p-3.rounded-lg.bg-\[\#1a1a1a\]:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.light button.bg-\[rgb\(1\,219\,151\)\],
+.light button.bg-\[rgb\(8\,134\,90\)\],
+.light button.bg-\[rgb\(204\,2\,77\)\],
+.light a.bg-\[rgb\(1\,219\,151\)\],
+.light a.bg-\[rgb\(8\,134\,90\)\],
+.light a.bg-\[rgb\(204\,2\,77\)\] {
+  color: white !important;
+}
+
+.light .w-8.h-8.rounded-full.bg-\[\#222\] {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.light .w-8.h-8.rounded-full.bg-\[\#222\] svg,
+.light .w-8.h-8.rounded-full.bg-\[rgb\(204\,2\,77\)\/10\] svg,
+.light .dropdown-icon svg {
+  color: white !important;
+}
+
+.light button.bg-\[rgb\(1\,219\,151\)\] span,
+.light button.bg-\[rgb\(8\,134\,90\)\] span,
+.light button.bg-\[rgb\(204\,2\,77\)\] span,
+.light a.bg-\[rgb\(1\,219\,151\)\] span,
+.light a.bg-\[rgb\(8\,134\,90\)\] span,
+.light a.bg-\[rgb\(204\,2\,77\)\] span {
+  color: white !important;
+}
+
+.light .w-8.h-8.rounded-full.bg-black {
+  background-color: white !important;
+}
+
+.light .w-8.h-8.rounded-full.bg-black svg {
+  color: black !important;
+}
+
+.light .w-8.h-8.rounded-full svg {
+  color: white !important;
+}
+
+.light .text-\[rgb\(1\,219\,151\)\] svg {
+  color: rgb(1, 219, 151) !important;
+}
+
+.light .text-\[rgb\(204\,2\,77\)\] svg {
+  color: rgb(204, 2, 77) !important;
+}
+
+button:has(span:contains("COMPRA")),
+button:has(span:contains("VENDA")) {
+  color: white !important;
+}
+
+.light .group-hover\:bg-\[rgb\(1\,219\,151\)\/10\] svg {
+  color: rgb(1, 219, 151) !important;
+}
+
+.light button.bg-\[rgb\(8\,134\,90\)\] svg,
+.light button.bg-\[rgb\(204\,2\,77\)\] svg,
+.light a.bg-\[rgb\(8\,134\,90\)\] svg,
+.light a.bg-\[rgb\(204\,2\,77\)\] svg {
+  color: white !important;
+}
+
+.light .text-\[rgb\(1\,219\,151\)\] svg.text-\[rgb\(1\,219\,151\)\],
+.light .w-8.h-8.rounded-full.bg-\[rgba\(1\,219\,151\,0\.1\)\] svg {
+  color: black !important;
+}
+
+.light .text-\[rgb\(204\,2\,77\)\],
+.light .text-\[rgb\(204\,2\,77\)\] svg,
+.light .w-8.h-8.rounded-full.bg-\[rgb\(204\,2\,77\)\/10\] svg {
+  color: black !important;
+}
+
+.buy-button svg,
+.sell-button svg,
+button.bg-\[rgb\(8\,134\,90\)\] svg,
+button.bg-\[rgb\(204\,2\,77\)\] svg,
+button:has(span:contains("COMPRA")) svg,
+button:has(span:contains("VENDA")) svg,
+.light .buy-button svg,
+.light .sell-button svg,
+.light button.bg-\[rgb\(8\,134\,90\)\] svg,
+.light button.bg-\[rgb\(204\,2\,77\)\] svg {
+  color: white !important;
+  fill: white !important;
+}
+
+.light .profile-avatar {
+  background-color: white !important;
+  border-color: #e0e0e0 !important;
+}
+
+.light .profile-avatar svg {
+  color: black !important;
+}
+
+.wallet-button svg,
+a.bg-\[rgb\(8\,134\,90\)\] svg,
+header a.bg-\[rgb\(8\,134\,90\)\] svg,
+.light .wallet-button svg,
+.light a.bg-\[rgb\(8\,134\,90\)\] svg,
+.light header a.bg-\[rgb\(8\,134\,90\)\] svg {
+  color: white !important;
+  fill: white !important;
+}
+
+.light .w-8.h-8.rounded-full.bg-\[rgba\(255\,170\,0\,0\.1\)\] svg,
+.light .w-8.h-8.rounded-full.bg-\[rgba\(1\,219\,151\,0\.1\)\] svg {
+  color: white !important;
+  background-color: black !important;
+}
+
+.light .w-8.h-8.rounded-full.bg-\[rgba\(255\,170\,0\,0\.1\)\],
+.light .w-8.h-8.rounded-full.bg-\[rgba\(1\,219\,151\,0\.1\)\] {
+  background-color: black !important;
+}
+
+.light .bg-\[rgb\(8\,134\,90\)\].p-1\.5 svg,
+.light .bg-\[rgb\(8\,134\,90\)\].rounded-full svg,
+.light .bg-\[rgb\(8\,134\,90\)\] svg,
+.light div.bg-\[rgb\(8\,134\,90\)\] svg {
+  color: white !important;
+  fill: white !important;
+}
+
+/* Add these styles to the end of the file for the TradingView widget */
+
+/* TradingView widget iframe styles */
+iframe {
+  border: none !important;
+}
+
+/* Ensure the TradingView widget container takes full height */
+.tradingview-widget-container {
+  height: 100%;
+}
+
+/* Custom scrollbar for TradingView elements */
+.tradingview-widget-container ::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.tradingview-widget-container ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tradingview-widget-container ::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+}
+
+.tradingview-widget-container ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+@keyframes light-sweep {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(200%);
+    opacity: 0;
+  }
+}
+
+.active:before, /* para casos sem Tailwind active:before */
+button:active::before {
+  animation: light-sweep 0.6s ease forwards;
+}
+
+/* Para Tailwind, usar a classe que aplicamos 'active:before:animate-light-sweep' */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .animate-light-sweep {
+    animation: light-sweep 0.6s ease forwards;
+  }
+}
+
+/* Remove setas de inputs numéricos */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}

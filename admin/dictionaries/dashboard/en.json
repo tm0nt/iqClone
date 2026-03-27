@@ -1,0 +1,13 @@
+{
+  "title": "Dashboard",
+  "overview": "Overview of your analytics and performance",
+  "loading": "Loading...",
+  "totalDeposits": "Total Deposits",
+  "comparedLastMonth": "compared to last month",
+  "totalWithdrawals": "Total Withdrawals",
+  "registeredClients": "Registered Clients",
+  "pendingWithdrawals": "Pending Withdrawals",
+  "requestsAwaiting": "requests awaiting approval",
+  "financialOverview": "Financial Overview",
+  "annualPerformance": "Annual performance and deposit distribution"
+}

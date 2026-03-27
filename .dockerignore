@@ -1,0 +1,17 @@
+# Dependencies (installed inside container)
+trading/node_modules
+afiliados/node_modules
+admin/node_modules
+
+# Build outputs
+trading/.next
+afiliados/.next
+admin/.next
+
+# Dev / local
+**/.env
+**/.env.local
+**/.git
+**/.DS_Store
+**/npm-debug.log*
+**/.pnpm-store

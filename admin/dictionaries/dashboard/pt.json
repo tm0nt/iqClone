@@ -1,0 +1,13 @@
+{
+  "title": "Painel",
+  "overview": "Visão geral de suas análises e desempenho",
+  "loading": "Carregando...",
+  "totalDeposits": "Total de Depósitos",
+  "comparedLastMonth": "comparado ao mês passado",
+  "totalWithdrawals": "Total de Saques",
+  "registeredClients": "Clientes Registrados",
+  "pendingWithdrawals": "Saques Pendentes",
+  "requestsAwaiting": "pedidos aguardando aprovação",
+  "financialOverview": "Visão Geral Financeira",
+  "annualPerformance": "Desempenho anual e distribuição de depósitos"
+}
