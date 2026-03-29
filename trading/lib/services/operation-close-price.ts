@@ -3,8 +3,10 @@ import {
   fetchMarketPriceBySource,
   fetchMarketSnapshotBySource,
 } from "@/lib/server/market-data";
+import { getMarketProvidersMap } from "@/lib/server/market-registry";
+import { isCryptoSymbol } from "@/lib/forex-data";
 
-export async function fetchOperationClosePrice(source: string, symbol: string) {
+async function fetchClosePriceFromSource(source: string, symbol: string) {
   const errors: string[] = [];
 
   try {
@@ -51,4 +53,24 @@ export async function fetchOperationClosePrice(source: string, symbol: string) {
       ? errors.join(" | ")
       : `Failed to fetch settlement price for ${symbol}`,
   );
+}
+
+export async function fetchOperationClosePrice(source: string, symbol: string) {
+  try {
+    return await fetchClosePriceFromSource(source, symbol);
+  } catch (primaryError) {
+    if (!isCryptoSymbol(symbol)) throw primaryError;
+
+    const fallbackSlug = source === "tiingo" ? "binance" : "tiingo";
+    const providers = await getMarketProvidersMap();
+    const fallbackProvider = providers.get(fallbackSlug);
+    if (!fallbackProvider || fallbackProvider.isActive === false) {
+      throw primaryError;
+    }
+
+    console.warn(
+      `[close-price] ${source} failed for ${symbol}, fallback → ${fallbackSlug}`,
+    );
+    return await fetchClosePriceFromSource(fallbackSlug, symbol);
+  }
 }

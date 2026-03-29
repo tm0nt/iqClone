@@ -146,6 +146,47 @@ function getAdminBaseUrl(request: NextRequest): string {
   return `${proto}://${host}`;
 }
 
+function deriveFallbackCacheSecret(): string | null {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) return null;
+  // Must match the derivation in trading/lib/config/runtime-config.ts: deriveStableSecret("admin-session")
+  const { createHash } = require("crypto") as typeof import("crypto");
+  return createHash("sha256").update(`${databaseUrl}:admin-session`).digest("hex");
+}
+
+async function revalidateTradingCaches(secret?: string | null) {
+  const normalizedSecret = (secret ?? deriveFallbackCacheSecret())?.trim();
+
+  if (!normalizedSecret) {
+    return;
+  }
+
+  const urls = [
+    process.env.TRADING_CACHE_REVALIDATE_URL,
+    "http://trading:3000/api/internal/cache",
+  ]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "x-platform-cache-secret": normalizedSecret,
+        },
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        return;
+      }
+    } catch (error) {
+      console.warn("Falha ao revalidar caches do trading:", error);
+    }
+  }
+}
+
 export async function PUT(request: NextRequest): Promise<NextResponse> {
   const auth = await requireAdmin("SUPER_ADMIN");
   if (auth.error) return auth.error;
@@ -496,6 +537,16 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
     invalidateAdminRuntimeConfigCache();
     invalidateAdminSiteConfigCache();
+
+    if (Object.keys(config).length > 0 || hasProviderUpdates) {
+      await revalidateTradingCaches(
+        existingConfig?.adminSessionSecret ||
+          existingConfig?.authSecret ||
+          updatedConfig?.adminSessionSecret ||
+          updatedConfig?.authSecret ||
+          null,
+      );
+    }
 
     return NextResponse.json({
       success: true,

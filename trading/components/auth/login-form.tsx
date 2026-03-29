@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-import { ArrowRight, Mail, Lock } from "lucide-react";
+import { ArrowRight, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import AuthToggle from "@/components/auth/auth-toggle";
 import {
@@ -135,6 +135,12 @@ export default function LoginForm({ onToggleMode }: LoginFormProps) {
 
   const formVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 20 } } };
+  const inputClassName =
+    "h-12 w-full border border-black/12 bg-white px-4 text-black placeholder:text-black/35 focus:border-black/35 focus:outline-none transition-colors duration-200";
+  const iconClassName =
+    "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-black/40";
+  const visibilityButtonClassName =
+    "absolute right-3 top-1/2 -translate-y-1/2 text-black/45 transition-colors duration-200 hover:text-black";
 
   return (
     <motion.form onSubmit={handleSubmit} variants={formVariants} initial="hidden" animate="visible" className="grid grid-cols-12 gap-4">
@@ -143,15 +149,18 @@ export default function LoginForm({ onToggleMode }: LoginFormProps) {
           {t("emailLabel")}
         </label>
         <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Mail size={18} className="text-black/40" />
+          <div className={iconClassName}>
+            <Mail size={18} />
           </div>
           <input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-white border border-black/10 py-3 pl-10 pr-4 text-black focus:outline-none focus:border-black/30 transition-colors duration-300"
+            autoComplete="username"
+            inputMode="email"
+            spellCheck={false}
+            className={`${inputClassName} pl-11 pr-4`}
             placeholder={t("emailPlaceholder")}
             required
           />
@@ -163,20 +172,26 @@ export default function LoginForm({ onToggleMode }: LoginFormProps) {
           {t("passwordLabel")}
         </label>
         <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Lock size={18} className="text-black/40" />
+          <div className={iconClassName}>
+            <Lock size={18} />
           </div>
           <input
             id="password"
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-white border border-black/10 py-3 pl-10 pr-10 text-black focus:outline-none focus:border-black/30 transition-colors duration-300"
+            autoComplete="current-password"
+            className={`${inputClassName} pl-11 pr-12`}
             placeholder={t("passwordPlaceholder")}
             required
           />
-          <button type="button" className="absolute inset-y-0 right-3 flex items-center" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
-            {/* ícones omitidos para brevidade */}
+          <button
+            type="button"
+            className={visibilityButtonClassName}
+            onClick={() => setShowPassword(!showPassword)}
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             <span className="sr-only">
               {showPassword
                 ? t("togglePasswordVisibilityHide")
@@ -186,8 +201,8 @@ export default function LoginForm({ onToggleMode }: LoginFormProps) {
         </div>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="col-span-12 flex justify-end mb-8">
-        <Link href="/auth/forgot-password" className="text-xs transition-colors duration-300 hover:underline" style={{ color: "var(--platform-primary-color)" }}>
+      <motion.div variants={itemVariants} className="col-span-12 mb-5 flex justify-end">
+        <Link href="/auth/forgot-password" className="text-xs text-black/70 transition-colors duration-300 hover:text-black hover:underline">
           {t("forgotPassword")}
         </Link>
       </motion.div>
@@ -202,10 +217,10 @@ export default function LoginForm({ onToggleMode }: LoginFormProps) {
         </button>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="col-span-12 flex items-center gap-3 text-xs text-platform-overlay-muted">
-        <span className="h-px flex-1 bg-platform-overlay-surface/10" />
+      <motion.div variants={itemVariants} className="col-span-12 flex items-center gap-3 text-xs text-black/35">
+        <span className="h-px flex-1 bg-black/10" />
         <span>{t("divider")}</span>
-        <span className="h-px flex-1 bg-platform-overlay-surface/10" />
+        <span className="h-px flex-1 bg-black/10" />
       </motion.div>
 
       <motion.div variants={itemVariants} className="col-span-12">

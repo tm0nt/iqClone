@@ -24,19 +24,19 @@ export default function AuthToggle({
   onToggle,
 }: AuthToggleProps) {
   return (
-    <div className="mt-8 text-center">
-      <p className="text-sm text-platform-input-label">
+    <div className="mt-4 text-center">
+      <p className="text-sm text-black/65">
         {message}{" "}
         <motion.button
           onClick={onToggle}
-          className="text-platform-positive hover:text-platform-primary-hover transition-colors duration-300 font-medium relative"
+          className="relative font-medium text-black transition-colors duration-300 hover:text-black/70"
           type="button"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
           {linkText}
           <motion.div
-            className="absolute -bottom-1 left-0 right-0 h-[1px] bg-platform-positive"
+            className="absolute -bottom-1 left-0 right-0 h-[1px] bg-black"
             initial={{ scaleX: 0 }}
             whileHover={{ scaleX: 1 }}
             transition={{ duration: 0.3 }}

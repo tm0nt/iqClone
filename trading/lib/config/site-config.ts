@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { BRANDING_DEFAULTS } from "@shared/platform/branding";
+import { resolveAdminAssetUrl } from "@shared/platform/asset-urls";
 import {
   normalizeTradingRuntimeRules,
   type TradingRuntimeRules,
@@ -136,6 +137,7 @@ if (!globalThis.__PLATFORM_CONFIG_STATE__) {
 }
 
 async function buildPlatformConfig(): Promise<PlatformConfigValue> {
+  const adminBaseUrl = process.env.ADMIN_BASE_URL?.trim();
   let config = null;
 
   try {
@@ -162,8 +164,12 @@ async function buildPlatformConfig(): Promise<PlatformConfigValue> {
     ...normalizeTradingRuntimeRules(config),
     nomeSite: config?.nomeSite || BRANDING_DEFAULTS.nomeSite,
     urlSite: typeof config?.urlSite === "string" ? config.urlSite : "",
-    logoUrlDark: config?.logoUrlDark || BRANDING_DEFAULTS.logoUrlDark,
-    logoUrlWhite: config?.logoUrlWhite || BRANDING_DEFAULTS.logoUrlWhite,
+    logoUrlDark:
+      resolveAdminAssetUrl(config?.logoUrlDark, adminBaseUrl) ||
+      BRANDING_DEFAULTS.logoUrlDark,
+    logoUrlWhite:
+      resolveAdminAssetUrl(config?.logoUrlWhite, adminBaseUrl) ||
+      BRANDING_DEFAULTS.logoUrlWhite,
     supportUrl: typeof config?.supportUrl === "string" ? config.supportUrl : null,
     supportAvailabilityText:
       typeof config?.supportAvailabilityText === "string" &&
@@ -178,8 +184,10 @@ async function buildPlatformConfig(): Promise<PlatformConfigValue> {
     postbackUrl:
       typeof config?.postbackUrl === "string" ? config.postbackUrl : null,
     chartBackgroundUrl:
-      config?.chartBackgroundUrl || DEFAULT_CHART_BACKGROUND_URL,
-    faviconUrl: typeof config?.faviconUrl === "string" ? config.faviconUrl : null,
+      resolveAdminAssetUrl(config?.chartBackgroundUrl, adminBaseUrl) ||
+      DEFAULT_CHART_BACKGROUND_URL,
+    faviconUrl:
+      resolveAdminAssetUrl(config?.faviconUrl, adminBaseUrl) || null,
     valorMinimoDeposito: Number(config?.valorMinimoDeposito),
     valorMinimoSaque: Number(config?.valorMinimoSaque),
     googleAnalyticsId:
@@ -259,4 +267,8 @@ export async function getPlatformConfig() {
       trackWithdrawalEvents: true,
     };
   }
+}
+
+export function invalidatePlatformConfigCache() {
+  platformConfigState.cache = null;
 }

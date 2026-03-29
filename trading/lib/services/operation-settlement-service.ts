@@ -31,6 +31,7 @@ export async function runSettlementBatch(): Promise<SettlementBatchResult> {
   const retryDelayMs = Math.max(1_000, workerConfig?.retryDelayMs ?? 60_000);
   const now = new Date();
 
+  // Cleanup stale processing jobs
   await prisma.operationSettlementJob.updateMany({
     where: {
       status: "processing",
@@ -43,6 +44,16 @@ export async function runSettlementBatch(): Promise<SettlementBatchResult> {
       startedAt: null,
       lastError: "processing-timeout",
       scheduledFor: now,
+    },
+  });
+
+  // Cleanup old completed jobs (>24h) to prevent table bloat
+  await prisma.operationSettlementJob.deleteMany({
+    where: {
+      status: "completed",
+      processedAt: {
+        lte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+      },
     },
   });
 
@@ -142,7 +153,7 @@ export async function runSettlementBatch(): Promise<SettlementBatchResult> {
       });
       const resultado = outcome.didWin ? "ganho" : "perda";
 
-      await tradeService.resolveOperation(
+      const resolved = await tradeService.resolveOperation(
         operation.id,
         resultado,
         closePriceData.price,
@@ -152,32 +163,28 @@ export async function runSettlementBatch(): Promise<SettlementBatchResult> {
         data: {
           status: "completed",
           processedAt: new Date(),
-          lastError: null,
+          lastError: resolved ? null : "already-resolved",
         },
       });
 
-      results.push({
-        id: operation.id,
-        resultado,
-        source: closePriceData.source,
-        closePrice: closePriceData.price,
-      });
+      if (resolved) {
+        results.push({
+          id: operation.id,
+          resultado,
+          source: closePriceData.source,
+          closePrice: closePriceData.price,
+        });
+      }
     } catch (error) {
       const nextAttempts = job.attempts + 1;
       const lastError =
         error instanceof Error ? error.message : "Unknown settlement error";
 
       if (operation && nextAttempts >= maxAttempts) {
-        const fallbackOutcome = resolveTradeOutcome({
-          previsao: operation.previsao,
-          abertura: operation.abertura,
-          fechamento: operation.abertura,
-          minPriceVariation: operation.minPriceVariation,
-          settlementTolerance: operation.settlementTolerance,
-        });
-        const fallbackResult = fallbackOutcome.didWin ? "ganho" : "perda";
+        // Fallback: force loss — we cannot determine the actual close price
+        const fallbackResult = "perda" as const;
 
-        await tradeService.resolveOperation(
+        const resolved = await tradeService.resolveOperation(
           operation.id,
           fallbackResult,
           operation.abertura,
@@ -187,15 +194,17 @@ export async function runSettlementBatch(): Promise<SettlementBatchResult> {
           data: {
             status: "completed",
             processedAt: new Date(),
-            lastError: `${lastError} | fallback:entry-price`,
+            lastError: `${lastError} | fallback:entry-price${resolved ? "" : " | already-resolved"}`,
           },
         });
-        results.push({
-          id: operation.id,
-          resultado: fallbackResult,
-          source: "fallback:entry-price",
-          closePrice: operation.abertura,
-        });
+        if (resolved) {
+          results.push({
+            id: operation.id,
+            resultado: fallbackResult,
+            source: "fallback:entry-price",
+            closePrice: operation.abertura,
+          });
+        }
         continue;
       }
 

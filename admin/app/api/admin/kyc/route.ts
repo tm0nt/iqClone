@@ -26,7 +26,23 @@ export async function GET() {
       limit: 200,
     });
 
-    return NextResponse.json(result);
+    const withSecureLinks = result.map((item) => {
+      const entries = Object.entries(
+        (item.paths as Record<string, unknown> | null) ?? {},
+      ).filter(([, value]) => typeof value === "string");
+
+      return {
+        ...item,
+        paths: Object.fromEntries(
+          entries.map(([label]) => [
+            label,
+            `/api/admin/kyc/${item.id}/files/${label}`,
+          ]),
+        ),
+      };
+    });
+
+    return NextResponse.json(withSecureLinks);
   } catch (error) {
     console.error("Erro ao carregar KYC:", error);
     return NextResponse.json(

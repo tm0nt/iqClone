@@ -148,10 +148,18 @@ class PollingPriceManager {
     this.inflight.add(symbol);
 
     try {
+      const params = new URLSearchParams({
+        symbol,
+        _: String(Date.now()),
+      });
       const response = await fetch(
-        `/api/market/price?symbol=${encodeURIComponent(symbol)}`,
+        `/api/market/price?${params.toString()}`,
         {
           cache: "no-store",
+          headers: {
+            "cache-control": "no-cache",
+            pragma: "no-cache",
+          },
         },
       );
       const payload = await response.json().catch(() => null);
@@ -284,8 +292,16 @@ export async function fetchCurrentPrice(symbol: string): Promise<number> {
     return cachedPrice;
   }
 
-  const response = await fetch(`/api/market/price?symbol=${encodeURIComponent(normalized)}`, {
+  const params = new URLSearchParams({
+    symbol: normalized,
+    _: String(Date.now()),
+  });
+  const response = await fetch(`/api/market/price?${params.toString()}`, {
     cache: "no-store",
+    headers: {
+      "cache-control": "no-cache",
+      pragma: "no-cache",
+    },
   });
   const payload = await response.json().catch(() => null);
 

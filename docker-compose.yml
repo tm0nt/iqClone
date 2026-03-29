@@ -2,8 +2,12 @@
 #  Muniz Platform — docker compose up  (trading + afiliados + admin)
 # =====================================================================
 #
-#  1. Copy .env.example → .env and fill in your values
-#  2. docker compose up -d --build
+#  Automatic bootstrap:
+#    ./scripts/docker-up.sh
+#
+#  Manual bootstrap:
+#    cp .env.example .env
+#    docker compose up -d --build
 #
 #  Caddy handles HTTPS certificates automatically via Let's Encrypt.
 #  The trading service runs Prisma migrations + seed on startup.
@@ -16,15 +20,15 @@ services:
     container_name: muniz-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:-muniz_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-muniz_app_password}
+      POSTGRES_DB: ${DB_NAME:-muniz_platform}
     volumes:
       - pg_data:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-muniz_app} -d ${DB_NAME:-muniz_platform}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -37,25 +41,34 @@ services:
       context: .
       dockerfile: trading/Dockerfile
       args:
-        DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public"
+        DATABASE_URL: "postgresql://${DB_USER:-muniz_app}:${DB_PASSWORD:-muniz_app_password}@db:5432/${DB_NAME:-muniz_platform}?schema=public"
     container_name: muniz-trading
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public"
+      DATABASE_URL: "postgresql://${DB_USER:-muniz_app}:${DB_PASSWORD:-muniz_app_password}@db:5432/${DB_NAME:-muniz_platform}?schema=public"
       NODE_ENV: production
       AUTH_TRUST_HOST: "true"
-      AUTH_URL: "https://${TRADING_DOMAIN}"
-      NEXTAUTH_URL: "https://${TRADING_DOMAIN}"
+      AUTH_URL: "https://${TRADING_DOMAIN:-app.localhost}"
+      NEXTAUTH_URL: "https://${TRADING_DOMAIN:-app.localhost}"
       NEXTAUTH_URL_INTERNAL: "http://trading:3000"
-      SITE_DOMAIN: ${SITE_DOMAIN}
-      SITE_NAME: ${SITE_NAME}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_BASE_URL: "https://${ADMIN_DOMAIN:-admin.localhost}"
+      SITE_DOMAIN: ${SITE_DOMAIN:-localhost}
+      SITE_NAME: ${SITE_NAME:-Muniz Platform}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123456}
       TIINGO_API_KEY: ${TIINGO_API_KEY:-}
     expose:
       - "3000"
+    volumes:
+      - kyc_uploads:/app/private/kyc
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
 
   # =================== Afiliados ===================
   afiliados:
@@ -66,12 +79,13 @@ services:
     restart: unless-stopped
     depends_on:
       trading:
-        condition: service_started
+        condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      DATABASE_URL: "postgresql://${DB_USER:-muniz_app}:${DB_PASSWORD:-muniz_app_password}@db:5432/${DB_NAME:-muniz_platform}"
+      ADMIN_BASE_URL: "https://${ADMIN_DOMAIN:-admin.localhost}"
       NODE_ENV: production
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      NEXT_PUBLIC_ADMIN_URL: "https://${ADMIN_DOMAIN}"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-jwt-secret}
+      NEXT_PUBLIC_ADMIN_URL: "https://${ADMIN_DOMAIN:-admin.localhost}"
     expose:
       - "3000"
 
@@ -84,13 +98,16 @@ services:
     restart: unless-stopped
     depends_on:
       trading:
-        condition: service_started
+        condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      DATABASE_URL: "postgresql://${DB_USER:-muniz_app}:${DB_PASSWORD:-muniz_app_password}@db:5432/${DB_NAME:-muniz_platform}"
       NODE_ENV: production
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-jwt-secret}
     expose:
       - "1313"
+    volumes:
+      - admin_uploads:/app/public/uploads
+      - kyc_uploads:/app/private/kyc:ro
 
   # =================== Caddy (reverse proxy + auto SSL) ===================
   caddy:
@@ -106,9 +123,9 @@ services:
       - "443:443"
       - "443:443/udp"   # HTTP/3
     environment:
-      TRADING_DOMAIN: ${TRADING_DOMAIN}
-      AFILIADOS_DOMAIN: ${AFILIADOS_DOMAIN}
-      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+      TRADING_DOMAIN: ${TRADING_DOMAIN:-app.localhost}
+      AFILIADOS_DOMAIN: ${AFILIADOS_DOMAIN:-afiliados.localhost}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-admin.localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data          # TLS certificates
@@ -116,5 +133,7 @@ services:
 
 volumes:
   pg_data:
+  admin_uploads:
+  kyc_uploads:
   caddy_data:
   caddy_config:

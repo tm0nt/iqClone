@@ -205,7 +205,7 @@ model TradingPair {
   provider       String
   providerId     Int?
   marketProvider MarketDataProvider? @relation(fields: [providerId], references: [id])
-  priceSource    String              @default("itick")
+  priceSource    String              @default("")
   priceSymbol    String?
   payoutRate     Float               @default(0.9)
   minTradeValue  Float               @default(1)

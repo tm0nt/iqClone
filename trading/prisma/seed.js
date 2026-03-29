@@ -35,7 +35,7 @@ function getSiteUrl() {
       .replace(/\/.*$/, "");
     return `https://${clean}/`;
   }
-  return "https://app.rubygames.me/";
+  return "https://rubygames.me/";
 }
 
 function getSiteName() {
@@ -413,33 +413,48 @@ const mirroredTiingoForexPairs = baseTradingPairs
     providerSlug: "tiingo",
   }));
 
-const tradingPairs = [...baseTradingPairs, ...mirroredTiingoForexPairs];
+const mirroredTiingoCryptoPairs = baseTradingPairs
+  .filter((pair) => pair.providerSlug === "binance" && pair.type === "crypto")
+  .map((pair) => ({
+    ...pair,
+    providerSlug: "tiingo",
+  }));
+
+const tradingPairs = [
+  ...baseTradingPairs,
+  ...mirroredTiingoForexPairs,
+  ...mirroredTiingoCryptoPairs,
+];
 
 // =================== Seed Functions ===================
 
 async function criarMarketProviders() {
   const providerMap = {};
+  let criados = 0;
+  let preservados = 0;
+
   for (const provider of marketProviders) {
-    const record = await prisma.marketDataProvider.upsert({
+    const existingProvider = await prisma.marketDataProvider.findUnique({
       where: { slug: provider.slug },
-      update: {
-        name: provider.name,
-        type: provider.type,
-        restBaseUrl: provider.restBaseUrl,
-        wsBaseUrl: provider.wsBaseUrl,
-        authType: provider.authType,
-        authHeaderName: provider.authHeaderName,
-        authQueryParam: provider.authQueryParam,
-        envKey: provider.envKey,
-        isActive: provider.isActive,
-        sortOrder: provider.sortOrder,
-      },
-      create: provider,
+      select: { id: true },
     });
+
+    if (existingProvider) {
+      providerMap[provider.slug] = existingProvider.id;
+      preservados++;
+      continue;
+    }
+
+    const record = await prisma.marketDataProvider.create({
+      data: provider,
+    });
+
     providerMap[provider.slug] = record.id;
+    criados++;
   }
+
   console.log(
-    "  [OK] Market providers:",
+    `  [OK] Market providers: ${criados} criados, ${preservados} preservados`,
     Object.entries(providerMap)
       .map(([k, v]) => `${k}(id=${v})`)
       .join(", ")
@@ -449,7 +464,7 @@ async function criarMarketProviders() {
 
 async function criarTradingPairs(providerMap) {
   let criados = 0;
-  let atualizados = 0;
+  let preservados = 0;
 
   for (const pair of tradingPairs) {
     const { providerSlug, ...rest } = pair;
@@ -464,16 +479,7 @@ async function criarTradingPairs(providerMap) {
     });
 
     if (exists) {
-      await prisma.tradingPair.update({
-        where: { id: exists.id },
-        data: {
-          ...rest,
-          provider: providerName,
-          priceSource: providerSlug,
-          providerId,
-        },
-      });
-      atualizados++;
+      preservados++;
     } else {
       await prisma.tradingPair.create({
         data: {
@@ -488,18 +494,14 @@ async function criarTradingPairs(providerMap) {
   }
 
   console.log(
-    `  [OK] Trading pairs: ${criados} criados, ${atualizados} atualizados (total=${tradingPairs.length})`
+    `  [OK] Trading pairs: ${criados} criados, ${preservados} preservados (total=${tradingPairs.length})`
   );
 }
 
 async function criarConfigPadrao() {
   const config = await prisma.config.upsert({
     where: { id: 1 },
-    update: {
-      chartBackgroundUrl: "/world-map.png",
-      nomeSite: getSiteName(),
-      urlSite: getSiteUrl(),
-    },
+    update: {},
     create: {
       nomeSite: getSiteName(),
       urlSite: getSiteUrl(),
@@ -546,7 +548,7 @@ async function criarConfigPadrao() {
     await prisma.config.update({ where: { id: config.id }, data: patch });
   }
 
-  console.log("  [OK] Config → %s (%s)", getSiteName(), getSiteUrl());
+  console.log("  [OK] Config → %s (%s)", config.nomeSite, config.urlSite);
 }
 
 async function criarAdminPadrao() {

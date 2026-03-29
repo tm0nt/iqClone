@@ -276,15 +276,45 @@ export const initialForexPairs: ForexPair[] = defaultTradingPairs.map((pair) =>
 
 // =================== Helpers ===================
 
-/** Known crypto symbols (Binance). */
-const CRYPTO_SYMBOLS = new Set(defaultTradingPairs.filter((p) => p.type === "crypto").map((p) => p.symbol));
+/** Known crypto symbols (Binance/Tiingo). */
+const CRYPTO_QUOTE_SUFFIXES = [
+  "USDT",
+  "USDC",
+  "BUSD",
+  "USD",
+  "BTC",
+  "ETH",
+  "BNB",
+] as const;
+const CRYPTO_SYMBOLS = new Set(
+  defaultTradingPairs
+    .filter((p) => p.type === "crypto")
+    .map((p) => p.symbol),
+);
+const CRYPTO_BASE_ASSETS = new Set(
+  defaultTradingPairs
+    .filter((p) => p.type === "crypto")
+    .map((pair) => {
+      const symbol = pair.symbol.toUpperCase();
+      const quoteSuffix = CRYPTO_QUOTE_SUFFIXES.find((suffix) =>
+        symbol.endsWith(suffix),
+      );
+
+      return quoteSuffix ? symbol.slice(0, -quoteSuffix.length) : symbol;
+    })
+    .filter(Boolean),
+);
 
 /** Check if a symbol is a crypto pair (Binance) or forex (iTick). */
 export function isCryptoSymbol(symbol: string): boolean {
-  const s = symbol.toUpperCase();
+  const s = symbol.toUpperCase().replace(/[^A-Z]/g, "");
   if (CRYPTO_SYMBOLS.has(s)) return true;
-  // Heuristic: if it ends in USDT/BUSD/BTC/ETH/BNB, it's crypto
-  return /USDT$|BUSD$|BTC$|ETH$|BNB$/.test(s);
+
+  return CRYPTO_QUOTE_SUFFIXES.some((suffix) => {
+    if (!s.endsWith(suffix)) return false;
+    const baseAsset = s.slice(0, -suffix.length);
+    return CRYPTO_BASE_ASSETS.has(baseAsset);
+  });
 }
 
 /** For iTick, symbols need no transformation. */

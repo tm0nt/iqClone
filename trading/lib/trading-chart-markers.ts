@@ -136,13 +136,63 @@ export function createEntryMarkerSprite(
   const accent = am5.color(
     data.type === "buy" ? colors.success : colors.danger,
   );
+  const textColor = am5.Color.fromString(
+    getCssVar("--platform-header-text-color", "#ffffff"),
+  );
 
-  return createBalloonMarker(root, accent, `$${data.value.toFixed(2)}`, {
-    width: 62,
-    height: 22,
-    fontSize: 10,
-    fontWeight: "700",
+  const width = 56;
+  const height = 20;
+  const pointerLength = 6;
+
+  const outer = am5.Container.new(root, {
+    centerX: am5.p50,
+    centerY: am5.p100,
+    dy: -4,
+    layout: root.verticalLayout,
+    interactive: false,
   });
+
+  const balloon = outer.children.push(
+    am5.Container.new(root, {
+      width,
+      height: height + pointerLength,
+      centerX: am5.p50,
+      centerY: am5.p100,
+    }),
+  );
+
+  balloon.children.push(
+    am5.PointedRectangle.new(root, {
+      width,
+      height,
+      x: am5.p50,
+      centerX: am5.p50,
+      y: 0,
+      fill: accent,
+      strokeOpacity: 0,
+      pointerBaseWidth: 10,
+      pointerLength,
+      pointerX: width / 2,
+      pointerY: height + pointerLength,
+      cornerRadius: 4,
+    }),
+  );
+
+  balloon.children.push(
+    am5.Label.new(root, {
+      text: `$${data.value.toFixed(2)}`,
+      x: am5.p50,
+      centerX: am5.p50,
+      y: height / 2,
+      centerY: am5.p50,
+      fill: textColor,
+      fontSize: 10,
+      fontWeight: "700",
+      fontFamily: "monospace",
+    }),
+  );
+
+  return outer;
 }
 
 export function createResultMarkerSprite(

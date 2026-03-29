@@ -57,6 +57,14 @@
       "togglePasswordVisibilityShow": "Mostrar senha",
       "togglePasswordVisibilityHide": "Ocultar senha",
       "togglePasswordVisibility": "{state, select, show {Mostrar senha} hide {Ocultar senha} other {Alternar senha}}",
+      "passwordStrength": {
+        "label": "Força da senha",
+        "empty": "Vazia",
+        "weak": "Fraca",
+        "fair": "Regular",
+        "good": "Boa",
+        "strong": "Forte"
+      },
       "termsTextStart": "Li e concordo com os ",
       "termsTextTerms": "Termos de Uso",
       "termsTextAnd": " e a ",
@@ -640,7 +648,9 @@
     "modalExpectedProfit": "Lucro esperado",
     "modalSellPnL": "Lucro após a venda (L/P)",
     "noTradingPairs": "Sem paridades cadastradas",
-    "noTradingPairsDescription": "Nenhuma paridade ativa esta disponivel no momento."
+    "noTradingPairsDescription": "Nenhuma paridade ativa esta disponivel no momento.",
+    "noChartData": "Sem historico disponivel para este ativo",
+    "noChartDataDescription": "Nao foi possivel carregar candles suficientes agora. O grafico sera atualizado assim que houver historico valido."
   },
     "Loading": {
     "connecting": "Conectando...",

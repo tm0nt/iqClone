@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import {
-  fetchMarketCandles,
+  fetchResolvedMarketCandles,
   getMarketSource,
   MarketDataError,
 } from "@/lib/server/market-data";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -19,13 +22,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    const candles = await fetchMarketCandles(symbol, timeframe, limit);
+    const { source, candles } = await fetchResolvedMarketCandles(
+      symbol,
+      timeframe,
+      limit,
+    );
     return NextResponse.json(
       {
         symbol,
         timeframe,
         limit,
-        source: getMarketSource(symbol),
+        source,
         candles,
       },
       {

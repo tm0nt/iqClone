@@ -73,6 +73,10 @@ type DropdownType =
   | "drawingTools"
   | "indicators"
   | null;
+type ChartCandleCacheEntry = {
+  candles: CandleData[];
+  fetchedAt: number;
+};
 
 const CHART_APPEAR_DURATION_MS = 520;
 const SERIES_APPEAR_DURATION_MS = 420;
@@ -81,6 +85,7 @@ const Y_AXIS_OUTLIER_MULTIPLIER = 4.5;
 const Y_AXIS_BODY_RANGE_MULTIPLIER = 2.8;
 const Y_AXIS_BOTTOM_PAD_RATIO = 0.1;
 const Y_AXIS_TOP_PAD_RATIO = 0.08;
+const CLIENT_CANDLE_CACHE_TTL_MS = 5_000;
 
 import type { ChartEventType } from "@/hooks/useChartDebugLog";
 
@@ -196,6 +201,7 @@ export function StockChart({
   const [timeframe, setTimeframe] = useState<string>("1m");
   const [isSellingActiveOperations, setIsSellingActiveOperations] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [sellingOperationIds, setSellingOperationIds] = useState<string[]>([]);
   const [activeDrawingToolId, setActiveDrawingToolId] = useState<string | null>(
     null,
@@ -216,9 +222,27 @@ export function StockChart({
     drawingColorOptions[0]?.value || "#3B82F6",
   );
   const isInitialLoadRef = useRef(true);
-  const candlesMapRef = useRef<Map<string, CandleData[]>>(new Map());
+  const candlesMapRef = useRef<Map<string, ChartCandleCacheEntry>>(new Map());
   const updateChartDataRef = useRef<(() => Promise<unknown>) | null>(null);
   const chartBackgroundSrc = chartBackgroundUrl || "/world-map.png";
+
+  const persistCandlesCache = useCallback(
+    (pair: string, nextTimeframe: string, candles: CandleData[]) => {
+      const cacheKey = `${pair}_${nextTimeframe}`;
+      const trimmedCandles = candles.slice(-MAX_CANDLES_IN_MEMORY);
+
+      if (trimmedCandles.length === 0) {
+        candlesMapRef.current.delete(cacheKey);
+        return;
+      }
+
+      candlesMapRef.current.set(cacheKey, {
+        candles: trimmedCandles,
+        fetchedAt: Date.now(),
+      });
+    },
+    [],
+  );
 
   const isMarketUnavailableError = useCallback((message: string) => {
     const normalized = message.toLowerCase();
@@ -241,6 +265,11 @@ export function StockChart({
   useEffect(() => {
     resultMarkersRef.current = resultMarkers;
   }, [resultMarkers]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   dismissResultRef.current = onDismissResult;
 
@@ -470,6 +499,11 @@ export function StockChart({
     }
   }, [tradeHoverDirection]);
 
+  const updateTradeHoverVisualsRef = useRef(updateTradeHoverVisuals);
+  useEffect(() => {
+    updateTradeHoverVisualsRef.current = updateTradeHoverVisuals;
+  }, [updateTradeHoverVisuals]);
+
   const fitYAxisToVisibleData = useCallback((instant = false) => {
     const series = mainSeriesRef.current;
     const dateAxis = dateAxisRef.current;
@@ -581,7 +615,7 @@ export function StockChart({
       yCurrentRef.current = { min: targetMin, max: targetMax };
       valueAxis.set("min", targetMin);
       valueAxis.set("max", targetMax);
-      updateTradeHoverVisuals();
+      updateTradeHoverVisualsRef.current();
       return;
     }
 
@@ -602,7 +636,7 @@ export function StockChart({
 
       va.set("min", current.min);
       va.set("max", current.max);
-      updateTradeHoverVisuals();
+      updateTradeHoverVisualsRef.current();
 
       // Stop when close enough
       const range = target.max - target.min;
@@ -615,7 +649,7 @@ export function StockChart({
         current.max = target.max;
         va.set("min", target.min);
         va.set("max", target.max);
-        updateTradeHoverVisuals();
+        updateTradeHoverVisualsRef.current();
         yLerpRafRef.current = null;
         return;
       }
@@ -624,7 +658,7 @@ export function StockChart({
     };
 
     yLerpRafRef.current = requestAnimationFrame(lerpStep);
-  }, [getYAxisStep, updateTradeHoverVisuals]);
+  }, [getYAxisStep]);
 
   // =============== Live update ===============
   const applyLiveUpdateRef = useRef<
@@ -688,6 +722,12 @@ export function StockChart({
         if (volumeSeries && !volumeSeries.get("forceHidden")) {
           volumeSeries.data.setIndex(volumeSeries.data.length - 1, updated);
         }
+        const cacheEntry = candlesMapRef.current.get(`${tradingPair}_${timeframe}`);
+        if (cacheEntry) {
+          const nextCandles = cacheEntry.candles.slice();
+          nextCandles[nextCandles.length - 1] = updated;
+          persistCandlesCache(tradingPair, timeframe, nextCandles);
+        }
       } else {
         const nextOpen = last ? last.Close : newPrice;
         const recentRange = last
@@ -720,6 +760,12 @@ export function StockChart({
           series.data.removeIndex(0);
           volumeSeries?.data.removeIndex(0);
         }
+
+        const cacheEntry = candlesMapRef.current.get(`${tradingPair}_${timeframe}`);
+        const nextCandles = cacheEntry?.candles
+          ? [...cacheEntry.candles, newCandle]
+          : [newCandle];
+        persistCandlesCache(tradingPair, timeframe, nextCandles);
       }
 
       // Price indicator
@@ -729,7 +775,7 @@ export function StockChart({
         cvdi?.set?.("value", newPrice);
         const label = cvdi?.get("label");
         label?.set("text", stockChart.getNumberFormatter().format(newPrice));
-        updateTradeHoverVisuals();
+        updateTradeHoverVisualsRef.current();
       }
 
       // X-axis auto-follow (throttled every 10 ticks)
@@ -752,7 +798,13 @@ export function StockChart({
         fitYAxisToVisibleData();
       }
     },
-    [onPriceUpdate, timeframe, fitYAxisToVisibleData, updateTradeHoverVisuals],
+    [
+      onPriceUpdate,
+      timeframe,
+      tradingPair,
+      fitYAxisToVisibleData,
+      persistCandlesCache,
+    ],
   );
 
   applyLiveUpdateRef.current = _applyLiveUpdate;
@@ -855,8 +907,11 @@ export function StockChart({
       }
 
       const cacheKey = `${tradingPair}_${timeframe}`;
-      let dataToLoad: CandleData[] = candlesMapRef.current.get(cacheKey) || [];
-      const cached = dataToLoad.length > 0;
+      const cacheEntry = candlesMapRef.current.get(cacheKey);
+      const cached =
+        Boolean(cacheEntry?.candles.length) &&
+        Date.now() - (cacheEntry?.fetchedAt ?? 0) < CLIENT_CANDLE_CACHE_TTL_MS;
+      let dataToLoad: CandleData[] = cached ? cacheEntry?.candles || [] : [];
       if (!cached) {
         _dbg("data_load", `Fetching ${tradingPair} ${timeframe}...`);
         dataToLoad = await chartService.fetchCandles(
@@ -864,7 +919,14 @@ export function StockChart({
           timeframe,
           INITIAL_FETCH_CANDLES,
         );
-        candlesMapRef.current.set(cacheKey, dataToLoad);
+        persistCandlesCache(tradingPair, timeframe, dataToLoad);
+      }
+
+      if (dataToLoad.length === 0) {
+        setError(null);
+        setEmptyStateMessage(t("noChartData"));
+        setLoading(false);
+        return;
       }
 
       const isStaleRun =
@@ -929,11 +991,13 @@ export function StockChart({
             const candleUpColor = am5.color(CHART_COLORS.candle.up);
             const candleDownColor = am5.color(CHART_COLORS.candle.down);
             newMainSeries.columns.template.setAll({
-              cornerRadiusTL: 1,
-              cornerRadiusTR: 1,
+              cornerRadiusTL: 0,
+              cornerRadiusTR: 0,
+              cornerRadiusBL: 0,
+              cornerRadiusBR: 0,
               strokeOpacity: 1,
-              width: am5.percent(115),
-              fillOpacity: 0.8,
+              width: am5.percent(70),
+              fillOpacity: 1,
               strokeWidth: 1,
             });
             newMainSeries.columns.template.adapters.add(
@@ -1077,7 +1141,7 @@ export function StockChart({
             "text",
             stockChart.getNumberFormatter().format(lastCandle.Close),
           );
-        updateTradeHoverVisuals();
+        updateTradeHoverVisualsRef.current();
 
         newMainSeries.events.once?.("datavalidated", () => {
           const len = newMainSeries.data.length;
@@ -1151,6 +1215,7 @@ export function StockChart({
     }
   }, [
     isMarketUnavailableError,
+    persistCandlesCache,
     saveDrawingsForPair,
     tradingPair,
     timeframe,
@@ -1159,7 +1224,6 @@ export function StockChart({
     updateLiveDataFromQuote,
     fitYAxisToVisibleData,
     t,
-    updateTradeHoverVisuals,
   ]);
 
   useEffect(() => {
@@ -1298,7 +1362,7 @@ export function StockChart({
         wheelY: "zoomX",
         wheelX: "none",
         panX: true,
-        panY: false,
+        panY: true,
         pinchZoomX: true,
         pinchZoomY: false,
         height: am5.percent(100),
@@ -1376,11 +1440,14 @@ export function StockChart({
 
     const dateAxis = mainPanel.xAxes.push(
       am5xy.GaplessDateAxis.new(root, {
-        extraMax: 0.03,
+        extraMax: 0.06,
         baseInterval: { timeUnit: "minute", count: 1 },
+        groupData: false,
         renderer: am5xy.AxisRendererX.new(root, {
-          minGridDistance: 500,
+          minGridDistance: 70,
           minorGridEnabled: true,
+          cellStartLocation: 0.15,
+          cellEndLocation: 0.85,
         }),
         tooltip: am5.Tooltip.new(root, {}),
       }),
@@ -1417,10 +1484,10 @@ export function StockChart({
         fill: am5.Color.fromString(CHART_COLORS.priceTag),
         fillOpacity: 1,
         strokeOpacity: 0,
-        pointerBaseWidth: 16,
-        pointerLength: 10,
+        pointerBaseWidth: 34,
+        pointerLength: 14,
         pointerX: 0,
-        pointerY: 17,
+        pointerY: am5.p50,
         cornerRadius: 0,
       }),
       paddingLeft: 16,
@@ -1912,7 +1979,7 @@ export function StockChart({
       { exitValue: 0, pnl: 0 },
     );
     const remainingMs = currentAssetOperations.reduce(
-      (min, operation) => Math.min(min, getOperationRemainingMs(operation)),
+      (min, operation) => Math.min(min, getOperationRemainingMs(operation, nowMs)),
       Number.POSITIVE_INFINITY,
     );
     const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
@@ -1940,6 +2007,7 @@ export function StockChart({
     currentAssetOperations,
     currentPrice,
     formatUsd,
+    nowMs,
     selectedCrypto?.basePrice,
   ]);
   const activeDrawingTool = useMemo<TradingChartDrawingTool | null>(
@@ -2279,7 +2347,9 @@ export function StockChart({
           <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 px-6 py-8 text-center text-white backdrop-blur-sm">
             <h2 className="text-xl font-semibold">{emptyStateMessage}</h2>
             <p className="mt-2 text-sm text-white/70">
-              {t("noTradingPairsDescription")}
+              {emptyStateMessage === t("noChartData")
+                ? t("noChartDataDescription")
+                : t("noTradingPairsDescription")}
             </p>
           </div>
         </div>

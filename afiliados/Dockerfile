@@ -1,17 +1,18 @@
-# ============ Stage 1: Dependencies ============
-FROM node:18-alpine AS deps
+# ============ Base ============
+FROM node:18-alpine AS base
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN apk add --no-cache composer \
+ && npm install -g pnpm
+
+# ============ Stage 1: Dependencies ============
+FROM base AS deps
 
 COPY afiliados/package.json afiliados/pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile
 
 # ============ Stage 2: Build ============
-FROM node:18-alpine AS builder
-WORKDIR /app
-
-RUN npm install -g pnpm
+FROM base AS builder
 
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
@@ -26,12 +27,9 @@ COPY afiliados/ ./
 RUN pnpm run build
 
 # ============ Stage 3: Production Runtime ============
-FROM node:18-alpine AS runner
-WORKDIR /app
+FROM base AS runner
 
 ENV NODE_ENV=production
-
-RUN npm install -g pnpm
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next

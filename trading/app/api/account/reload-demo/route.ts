@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/session";
+import { balanceService } from "@/lib/services/balance-service";
 
 export async function POST() {
-  const { session, error } = await requireAuth();
-  if (error) return error;
+  try {
+    const { session, error } = await requireAuth();
+    if (error) return error;
 
-  const updated = await prisma.balance.update({
-    where: { userId: session.userId },
-    data: {
-      saldoDemo: 10000,
-    },
-  });
-
-  return NextResponse.json({
-    success: true,
-    demoBalance: Number(updated.saldoDemo),
-  });
+    const result = await balanceService.resetDemoBalance(session.userId);
+    return NextResponse.json({ success: true, ...result });
+  } catch (error) {
+    console.error("Erro ao recarregar saldo demo:", error);
+    return NextResponse.json(
+      { error: "Erro interno do servidor" },
+      { status: 500 },
+    );
+  }
 }

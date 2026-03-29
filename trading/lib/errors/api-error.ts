@@ -29,6 +29,10 @@ export class ApiError extends Error {
     return new ApiError(404, message);
   }
 
+  static conflict(message = "Conflito de estado") {
+    return new ApiError(409, message);
+  }
+
   static internal(message = "Erro interno do servidor", details?: unknown) {
     return new ApiError(500, message, details);
   }

@@ -32,6 +32,7 @@ type RegistryState = {
   marketProvidersCache: CachedValue<Map<string, MarketProviderRecord>> | null;
   tradingPairsCache: CachedValue<Map<string, TradingPairRecord>> | null;
   bootstrapPromise: Promise<void> | null;
+  bootstrapped: boolean;
   marketProvidersPromise: Promise<Map<string, MarketProviderRecord>> | null;
   tradingPairsPromise: Promise<Map<string, TradingPairRecord>> | null;
 };
@@ -88,6 +89,7 @@ const registryState: RegistryState =
     marketProvidersCache: null,
     tradingPairsCache: null,
     bootstrapPromise: null,
+    bootstrapped: false,
     marketProvidersPromise: null,
     tradingPairsPromise: null,
   };
@@ -98,6 +100,26 @@ if (!globalThis.__MARKET_REGISTRY_STATE__) {
 
 function normalizeSymbol(symbol: string) {
   return symbol.trim().toUpperCase();
+}
+
+function resolveFallbackProvider(
+  providers: Map<string, MarketProviderRecord>,
+  symbol: string,
+) {
+  const preferredSlug = isCryptoSymbol(symbol) ? "binance" : "tiingo";
+  const preferredProvider = providers.get(preferredSlug);
+
+  if (preferredProvider && preferredProvider.isActive !== false) {
+    return preferredProvider;
+  }
+
+  const tiingoProvider = providers.get("tiingo");
+  if (tiingoProvider && tiingoProvider.isActive !== false) {
+    return tiingoProvider;
+  }
+
+  const anyActive = [...providers.values()].find((p) => p.isActive !== false);
+  return anyActive ?? preferredProvider ?? tiingoProvider ?? [...providers.values()][0];
 }
 
 function providerSlugForPair(pair: {
@@ -118,7 +140,15 @@ function buildDefaultRegistryPairs() {
       exchange: "TIINGO",
     }));
 
-  return [...defaultTradingPairs, ...tiingoForexPairs];
+  const tiingoCryptoPairs = defaultTradingPairs
+    .filter((pair) => pair.type === "crypto")
+    .map((pair) => ({
+      ...pair,
+      provider: "TIINGO",
+      exchange: "TIINGO",
+    }));
+
+  return [...defaultTradingPairs, ...tiingoForexPairs, ...tiingoCryptoPairs];
 }
 
 function getTradingPairPriority(pair: TradingPairRecord) {
@@ -149,23 +179,22 @@ export function invalidateMarketRegistryCaches() {
 }
 
 async function bootstrapMarketRegistry() {
+  let createdProviders = 0;
+
   for (const provider of defaultMarketProviders) {
-    await prisma.marketDataProvider.upsert({
+    const existingProvider = await prisma.marketDataProvider.findUnique({
       where: { slug: provider.slug },
-      update: {
-        name: provider.name,
-        type: provider.type,
-        restBaseUrl: provider.restBaseUrl,
-        wsBaseUrl: provider.wsBaseUrl,
-        authType: provider.authType,
-        authHeaderName: provider.authHeaderName,
-        authQueryParam: provider.authQueryParam,
-        envKey: provider.envKey,
-        isActive: provider.isActive,
-        sortOrder: provider.sortOrder,
-      },
-      create: provider,
+      select: { id: true },
     });
+
+    if (existingProvider) {
+      continue;
+    }
+
+    await prisma.marketDataProvider.create({
+      data: provider,
+    });
+    createdProviders += 1;
   }
 
   const providers = await loadMarketProviders();
@@ -173,6 +202,7 @@ async function bootstrapMarketRegistry() {
     providers.map((provider) => [provider.slug.toLowerCase(), provider]),
   );
   const seedPairs = buildDefaultRegistryPairs();
+  let createdPairs = 0;
 
   for (const [index, pair] of seedPairs.entries()) {
     const providerSlug = providerSlugForPair({
@@ -208,22 +238,31 @@ async function bootstrapMarketRegistry() {
     } satisfies Prisma.TradingPairUncheckedCreateInput;
 
     if (existingPair) {
-      await prisma.tradingPair.update({
-        where: { id: existingPair.id },
-        data,
-      });
       continue;
     }
 
     await prisma.tradingPair.create({
       data,
     });
+    createdPairs += 1;
   }
 
+  registryState.bootstrapped = true;
   invalidateMarketRegistryCaches();
+
+  if (createdProviders > 0 || createdPairs > 0) {
+    console.log(
+      "[market-registry] defaults criados:",
+      `${createdProviders} providers, ${createdPairs} pares`,
+    );
+  }
 }
 
 export async function ensureDefaultMarketProviders() {
+  if (registryState.bootstrapped) {
+    return;
+  }
+
   if (!registryState.bootstrapPromise) {
     registryState.bootstrapPromise = bootstrapMarketRegistry().finally(() => {
       registryState.bootstrapPromise = null;
@@ -338,9 +377,7 @@ export async function resolveMarketSourceForSymbol(symbol: string) {
     };
   }
 
-  const fallbackProvider = providers.get(
-    isCryptoSymbol(normalized) ? "binance" : "tiingo",
-  );
+  const fallbackProvider = resolveFallbackProvider(providers, normalized);
 
   return {
     symbol: normalized,

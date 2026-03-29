@@ -16,13 +16,20 @@ import {
 } from "@/lib/services/trading-runtime";
 import { calculateLiveOperationSellSnapshot } from "@/lib/trade-operation-math";
 
+let payoutRateCache: { value: number; expiresAt: number } | null = null;
+
 async function getDefaultPayoutRate(): Promise<number> {
+  if (payoutRateCache && payoutRateCache.expiresAt > Date.now()) {
+    return payoutRateCache.value;
+  }
   const setting = await prisma.systemSettings.findUnique({
     where: { key: "trading.default_payout_rate" },
     select: { value: true },
   });
   const parsed = parseFloat(setting?.value ?? "");
-  return isNaN(parsed) ? 0.9 : parsed;
+  const value = isNaN(parsed) ? 0.9 : parsed;
+  payoutRateCache = { value, expiresAt: Date.now() + 60_000 };
+  return value;
 }
 
 function inferProviderSlug(symbol: string) {
@@ -196,31 +203,45 @@ export const tradeService = {
     resultado: "ganho" | "perda",
     fechamento: number,
   ) {
-    const operation = await tradeRepository.findById(operationId);
-    if (!operation) throw ApiError.notFound("Operação não encontrada");
-    if (operation.resultado && operation.resultado !== "pendente") {
-      throw ApiError.badRequest("Operação já foi resolvida");
-    }
-
     const defaultPayoutRate = await getDefaultPayoutRate();
-    const receita =
-      resultado === "ganho"
-        ? operation.receita ??
-          operation.valor * (operation.payoutRateSnapshot ?? defaultPayoutRate)
-        : 0;
 
     const updated = await prisma.$transaction(async (tx) => {
-      const updated = await tx.tradeOperation.update({
-        where: { id: operationId },
+      // Atomic claim: only succeeds if operation is still pending
+      const claimed = await tx.tradeOperation.updateMany({
+        where: { id: operationId, resultado: "pendente" },
         data: {
           resultado,
           fechamento,
           resolvedAt: new Date(),
-          receita,
           status: resultado === "ganho" ? "ganho" : "perda",
           executado: true,
         },
       });
+
+      if (claimed.count === 0) {
+        return null; // Already resolved by another process
+      }
+
+      const operation = await tx.tradeOperation.findUnique({
+        where: { id: operationId },
+      });
+      if (!operation) return null;
+
+      // Compute receita inside tx with the claimed operation
+      const receita =
+        resultado === "ganho"
+          ? operation.receita ??
+            operation.valor *
+              (operation.payoutRateSnapshot ?? defaultPayoutRate)
+          : 0;
+
+      // Update receita (updateMany above couldn't compute it)
+      if (resultado === "ganho") {
+        await tx.tradeOperation.update({
+          where: { id: operationId },
+          data: { receita },
+        });
+      }
 
       // Credit the user's balance if they won (valor + receita)
       if (resultado === "ganho") {
@@ -232,18 +253,28 @@ export const tradeService = {
         });
       }
 
-      return updated;
+      return operation;
     });
+
+    if (!updated) return null;
+
+    // Affiliate commission (outside tx — best effort)
+    const receita =
+      resultado === "ganho"
+        ? updated.receita ??
+          updated.valor *
+            (updated.payoutRateSnapshot ?? defaultPayoutRate)
+        : 0;
 
     if (resultado === "perda") {
       await processAffiliateRevShareOnLoss({
-        referredUserId: operation.userId,
+        referredUserId: updated.userId,
         operationId,
-        amount: operation.valor,
+        amount: updated.valor,
       });
     } else {
       await processAffiliateRevShareOnWin({
-        referredUserId: operation.userId,
+        referredUserId: updated.userId,
         operationId,
         amount: receita,
       });
@@ -255,9 +286,6 @@ export const tradeService = {
   async sellOperation(operationId: string, fechamento: number) {
     const operation = await tradeRepository.findById(operationId);
     if (!operation) throw ApiError.notFound("Operação não encontrada");
-    if (operation.resultado && operation.resultado !== "pendente") {
-      throw ApiError.badRequest("Operação já foi resolvida");
-    }
 
     const defaultPayoutRate = await getDefaultPayoutRate();
     const expectedProfit =
@@ -274,8 +302,9 @@ export const tradeService = {
     const balanceField = operation.tipo === "demo" ? "saldoDemo" : "saldoReal";
 
     const updated = await prisma.$transaction(async (tx) => {
-      const updatedOperation = await tx.tradeOperation.update({
-        where: { id: operationId },
+      // Atomic claim: only succeeds if operation is still pending
+      const claimed = await tx.tradeOperation.updateMany({
+        where: { id: operationId, resultado: "pendente" },
         data: {
           resultado,
           fechamento,
@@ -285,6 +314,10 @@ export const tradeService = {
           executado: true,
         },
       });
+
+      if (claimed.count === 0) {
+        throw ApiError.conflict("Operação já foi resolvida");
+      }
 
       await tx.operationSettlementJob.updateMany({
         where: { operationId },
@@ -302,7 +335,7 @@ export const tradeService = {
         });
       }
 
-      return updatedOperation;
+      return tx.tradeOperation.findUnique({ where: { id: operationId } });
     });
 
     if (snapshot.pnl < 0) {

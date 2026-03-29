@@ -1,26 +1,26 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { tradeService } from "@/lib/services/trade-service";
+import { ApiError } from "@/lib/errors";
 
 /**
  * PATCH /api/account/operations/search?id=<uuid>
  *
  * Settles an operation with a result (ganho/perda).
- * Protected by authentication; validates operation ownership.
+ * Delegates to tradeService.resolveOperation() for atomic settlement.
  */
 export async function PATCH(request: Request) {
   try {
     const { session, error } = await requireAuth();
     if (error) return error;
 
-    const userId = session.userId;
-
     const url = new URL(request.url);
     const id = url.searchParams.get("id");
 
     if (!id) {
       return NextResponse.json(
-        { error: "ID da operação não fornecido" },
+        { error: "ID da operacao nao fornecido" },
         { status: 400 },
       );
     }
@@ -29,14 +29,14 @@ export async function PATCH(request: Request) {
 
     if (!["demo", "real"].includes(tipo)) {
       return NextResponse.json(
-        { error: "Tipo de saldo inválido" },
+        { error: "Tipo de saldo invalido" },
         { status: 400 },
       );
     }
 
     if (!["perda", "ganho"].includes(resultado)) {
       return NextResponse.json(
-        { error: "Resultado inválido" },
+        { error: "Resultado invalido" },
         { status: 400 },
       );
     }
@@ -49,104 +49,44 @@ export async function PATCH(request: Request) {
 
     if (!operation) {
       return NextResponse.json(
-        { error: "Operação não encontrada" },
+        { error: "Operacao nao encontrada" },
         { status: 404 },
       );
     }
 
-    if (operation.userId !== userId) {
+    if (operation.userId !== session.userId) {
       return NextResponse.json(
-        { error: "Operação não pertence ao usuário" },
+        { error: "Operacao nao pertence ao usuario" },
         { status: 403 },
       );
     }
 
-    // Prevent re-settlement
-    if (operation.resultado && operation.resultado !== "pendente") {
+    // Delegate to service (atomic settlement with race-condition protection)
+    const resolved = await tradeService.resolveOperation(
+      id,
+      resultado,
+      fechamento,
+    );
+
+    if (!resolved) {
       return NextResponse.json(
-        { error: "Operação já foi liquidada" },
+        { error: "Operacao ja foi liquidada" },
         { status: 400 },
       );
     }
 
-    // Find user balance
-    const balance = await prisma.balance.findUnique({
-      where: { userId },
-    });
-
-    if (!balance) {
-      return NextResponse.json(
-        { error: "Saldo não encontrado" },
-        { status: 404 },
-      );
-    }
-
-    if (resultado === "perda") {
-      await prisma.tradeOperation.update({
-        where: { id },
-        data: {
-          fechamento,
-          resultado,
-          resolvedAt: new Date(),
-          status: "perda",
-          executado: true,
-        },
-      });
-      return NextResponse.json({
-        message: "Sem alteração no saldo devido à perda",
-        saldoAtualizado: {
-          tipo,
-          saldo: tipo === "demo" ? balance.saldoDemo : balance.saldoReal,
-        },
-      });
-    }
-
-    // ganho: credit balance with valor + receita
-    const tradeOperation = await prisma.tradeOperation.findUnique({
-      where: { id },
-    });
-
-    if (!tradeOperation) {
-      return NextResponse.json(
-        { error: "Operação não encontrada" },
-        { status: 404 },
-      );
-    }
-
-    const valorReceita = tradeOperation.valor + tradeOperation.receita;
-
-    let novoSaldo: number;
-    if (tipo === "demo") {
-      novoSaldo = balance.saldoDemo + valorReceita;
-      await prisma.balance.update({
-        where: { userId },
-        data: { saldoDemo: novoSaldo },
-      });
-    } else {
-      novoSaldo = balance.saldoReal + valorReceita;
-      await prisma.balance.update({
-        where: { userId },
-        data: { saldoReal: novoSaldo },
-      });
-    }
-
-    await prisma.tradeOperation.update({
-      where: { id },
-      data: {
-        fechamento,
-        resultado,
-        resolvedAt: new Date(),
-        status: "ganho",
-        executado: true,
-      },
-    });
-
     return NextResponse.json({
-      message: "Saldo atualizado com sucesso",
-      saldoAtualizado: { tipo, saldo: novoSaldo },
+      message: "Operacao liquidada com sucesso",
+      saldoAtualizado: { tipo },
     });
   } catch (error) {
-    console.error("Erro ao atualizar saldo:", error);
+    if (error instanceof ApiError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+    console.error("Erro ao liquidar operacao:", error);
     return NextResponse.json(
       { error: "Erro interno do servidor" },
       { status: 500 },

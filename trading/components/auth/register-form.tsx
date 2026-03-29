@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-import { ArrowRight, User, Mail, Lock } from "lucide-react";
+import { ArrowRight, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import AuthToggle from "@/components/auth/auth-toggle";
 import { registerUser } from "@/lib/auth/auth-service";
@@ -15,6 +15,36 @@ import { trackPlatformPixel } from "@/lib/tracking/pixels";
 
 interface RegisterFormProps {
   onToggleMode: () => void;
+}
+
+function getPasswordStrength(password: string) {
+  if (!password) {
+    return {
+      score: 0,
+      labelKey: "passwordStrength.empty",
+    };
+  }
+
+  let score = 0;
+
+  if (password.length >= 8) score += 1;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password) || password.length >= 12) score += 1;
+
+  if (score <= 1) {
+    return { score: 1, labelKey: "passwordStrength.weak" };
+  }
+
+  if (score === 2) {
+    return { score: 2, labelKey: "passwordStrength.fair" };
+  }
+
+  if (score === 3) {
+    return { score: 3, labelKey: "passwordStrength.good" };
+  }
+
+  return { score: 4, labelKey: "passwordStrength.strong" };
 }
 
 export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
@@ -39,6 +69,7 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
   const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const validateName = (name: string) => name.trim().length > 0;
   const validatePassword = (password: string) => password.length >= 8;
+  const passwordStrength = getPasswordStrength(password);
 
   useEffect(() => {
     const aff = searchParams.get("aff");
@@ -145,6 +176,12 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
 
   const formVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 20 } } };
+  const inputClassName =
+    "h-12 w-full border border-black/12 bg-white px-4 text-black placeholder:text-black/35 focus:border-black/35 focus:outline-none transition-colors duration-200";
+  const iconClassName =
+    "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-black/40";
+  const visibilityButtonClassName =
+    "absolute right-3 top-1/2 -translate-y-1/2 text-black/45 transition-colors duration-200 hover:text-black";
 
   return (
     <motion.form onSubmit={handleSubmit} variants={formVariants} initial="hidden" animate="visible" className="grid grid-cols-12 gap-4">
@@ -153,20 +190,21 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
           {t("nameLabel")}
         </label>
         <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <User size={18} className="text-black/40" />
+          <div className={iconClassName}>
+            <User size={18} />
           </div>
           <input
             id="name"
             type="text"
             value={name}
             onChange={handleNameChange}
-            className="w-full bg-white border border-black/10 py-3 pl-10 pr-4 text-black focus:outline-none focus:border-black/30 transition-colors duration-300"
+            autoComplete="name"
+            className={`${inputClassName} pl-11 pr-4`}
             placeholder={t("namePlaceholder")}
             required
           />
-          {nameValid === false && <p className="mt-1 text-xs text-platform-danger">{t("errors.name.inline")}</p>}
         </div>
+        {nameValid === false && <p className="mt-1 text-xs text-platform-danger">{t("errors.name.inline")}</p>}
       </motion.div>
 
       <motion.div variants={itemVariants} className="col-span-12 md:col-span-12">
@@ -174,20 +212,23 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
           {t("emailLabel")}
         </label>
         <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Mail size={18} className="text-black/40" />
+          <div className={iconClassName}>
+            <Mail size={18} />
           </div>
           <input
             id="email"
             type="email"
             value={email}
             onChange={handleEmailChange}
-            className="w-full bg-white border border-black/10 py-3 pl-10 pr-4 text-black focus:outline-none focus:border-black/30 transition-colors duration-300"
+            autoComplete="email"
+            inputMode="email"
+            spellCheck={false}
+            className={`${inputClassName} pl-11 pr-4`}
             placeholder={t("emailPlaceholder")}
             required
           />
-          {emailValid === false && <p className="mt-1 text-xs text-platform-danger">{t("errors.email.inline")}</p>}
         </div>
+        {emailValid === false && <p className="mt-1 text-xs text-platform-danger">{t("errors.email.inline")}</p>}
       </motion.div>
 
       <motion.div variants={itemVariants} className="col-span-12 md:col-span-12">
@@ -195,27 +236,54 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
           {t("passwordLabel")}
         </label>
         <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Lock size={18} className="text-platform-overlay-muted" />
+          <div className={iconClassName}>
+            <Lock size={18} />
           </div>
           <input
             id="password"
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={handlePasswordChange}
-            className="w-full bg-white border border-black/10 py-3 pl-10 pr-10 text-black focus:outline-none focus:border-black/30 transition-colors duration-300"
+            autoComplete="new-password"
+            className={`${inputClassName} pl-11 pr-12`}
             placeholder={t("passwordPlaceholder")}
             required
           />
-          <button type="button" className="absolute inset-y-0 right-3 flex items-center" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
+          <button
+            type="button"
+            className={visibilityButtonClassName}
+            onClick={() => setShowPassword(!showPassword)}
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             <span className="sr-only">
               {showPassword
                 ? t("togglePasswordVisibilityHide")
                 : t("togglePasswordVisibilityShow")}
             </span>
           </button>
-          {passwordValid === false && <p className="mt-1 text-xs text-platform-danger">{t("errors.password.inline")}</p>}
         </div>
+        {password.length > 0 ? (
+          <div className="mt-2 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-black/55">{t("passwordStrength.label")}</span>
+              <span className="font-medium text-black/75">
+                {t(passwordStrength.labelKey)}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[0, 1, 2, 3].map((index) => (
+                <span
+                  key={index}
+                  className={`h-1.5 rounded-full transition-colors duration-200 ${
+                    index < passwordStrength.score ? "bg-black" : "bg-black/10"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {passwordValid === false && <p className="mt-1 text-xs text-platform-danger">{t("errors.password.inline")}</p>}
       </motion.div>
 
       <motion.div variants={itemVariants} className="col-span-12 md:col-span-12">
@@ -223,43 +291,50 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
           {t("confirmPasswordLabel")}
         </label>
         <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Lock size={18} className="text-platform-overlay-muted" />
+          <div className={iconClassName}>
+            <Lock size={18} />
           </div>
           <input
             id="confirmPassword"
             type={showConfirmPassword ? "text" : "password"}
             value={confirmPassword}
             onChange={handleConfirmPasswordChange}
-            className="w-full bg-white border border-black/10 py-3 pl-10 pr-10 text-black focus:outline-none focus:border-black/30 transition-colors duration-300"
+            autoComplete="new-password"
+            className={`${inputClassName} pl-11 pr-12`}
             placeholder={t("confirmPasswordPlaceholder")}
             required
           />
-          <button type="button" className="absolute inset-y-0 right-3 flex items-center" onClick={() => setShowConfirmPassword(!showConfirmPassword)} tabIndex={-1}>
+          <button
+            type="button"
+            className={visibilityButtonClassName}
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            tabIndex={-1}
+          >
+            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             <span className="sr-only">
               {showConfirmPassword
                 ? t("togglePasswordVisibilityHide")
                 : t("togglePasswordVisibilityShow")}
             </span>
           </button>
-          {passwordsMatch === false && <p className="mt-1 text-xs text-platform-danger">{t("errors.passwordsMatch.inline")}</p>}
         </div>
+        {passwordsMatch === false && <p className="mt-1 text-xs text-platform-danger">{t("errors.passwordsMatch.inline")}</p>}
       </motion.div>
 
-      <motion.div variants={itemVariants} className="col-span-12 mb-8">
+      <motion.div variants={itemVariants} className="col-span-12 mb-5">
         <label className="flex items-start group cursor-pointer">
           <div className="relative flex items-center mt-1 mr-2">
             <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="peer sr-only" />
             <div className="w-5 h-5 border-2 border-black/20 rounded transition-colors duration-300 group-hover:border-black/40"></div>
             <div className="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity duration-300">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="var(--platform-primary-color)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
           </div>
           <span className="text-xs text-black/50">
             {t("termsTextStart")}
-            <a href="#" className="transition-colors duration-300 hover:underline" style={{ color: "var(--platform-primary-color)" }}>{t("termsTextTerms")}</a>
+            <a href="#" className="font-medium text-black transition-colors duration-300 hover:text-black/70 hover:underline">{t("termsTextTerms")}</a>
             {t("termsTextAnd")}
-            <a href="#" className="transition-colors duration-300 hover:underline" style={{ color: "var(--platform-primary-color)" }}>{t("termsTextPrivacy")}</a>
+            <a href="#" className="font-medium text-black transition-colors duration-300 hover:text-black/70 hover:underline">{t("termsTextPrivacy")}</a>
           </span>
         </label>
       </motion.div>

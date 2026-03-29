@@ -1,7 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface AccountState {
   name: string | null;
@@ -15,7 +13,6 @@ interface AccountState {
   birthdate: string | null;
   kycStatus: string | null;
   createdAt: string;
-  formattedCreatedAt: string;
   profilePicture: string | null;
   demoBalance: number;
   realBalance: number;
@@ -34,8 +31,6 @@ interface AccountState {
   addOperationResult: (result: OperationResult) => void;
   updateCurrentPrice: (symbol: string, price: number) => void;
   getCurrentBalance: () => number;
-  deductBalance: (amount: number) => boolean;
-  addBalance: (amount: number) => void;
   syncBalances: () => Promise<void>;
   updateUserInfo: (data: Partial<AccountState>) => void;
 }
@@ -83,7 +78,6 @@ export const useAccountStore = create<AccountState>()(
       birthdate: null,
       kycStatus: null,
       createdAt: "0000-00-00",
-      formattedCreatedAt: "",
       profilePicture: "",
       demoBalance: 0,
       realBalance: 0,
@@ -101,27 +95,6 @@ export const useAccountStore = create<AccountState>()(
       getCurrentBalance: () => {
         const { selectedAccount, demoBalance, realBalance } = get();
         return selectedAccount === "demo" ? demoBalance : realBalance;
-      },
-
-      deductBalance: (amount) => {
-        const { selectedAccount, demoBalance, realBalance } = get();
-        if (selectedAccount === "demo" && demoBalance >= amount) {
-          set({ demoBalance: demoBalance - amount });
-          return true;
-        } else if (selectedAccount === "real" && realBalance >= amount) {
-          set({ realBalance: realBalance - amount });
-          return true;
-        }
-        return false;
-      },
-
-      addBalance: (amount) => {
-        const { selectedAccount, demoBalance, realBalance } = get();
-        if (selectedAccount === "demo") {
-          set({ demoBalance: demoBalance + amount });
-        } else {
-          set({ realBalance: realBalance + amount });
-        }
       },
 
       addOperation: (operation) => {
@@ -172,15 +145,6 @@ export const useAccountStore = create<AccountState>()(
           });
           if (!res.ok) return;
           const data = await res.json();
-          const createdAtFormatted = format(
-            new Date(data.createdAt),
-            "MMM, yyyy",
-            { locale: ptBR },
-          );
-          const capitalizedDate =
-            createdAtFormatted.charAt(0).toUpperCase() +
-            createdAtFormatted.slice(1);
-
           set({
             demoBalance: data.demoBalance,
             realBalance: data.realBalance,
@@ -189,7 +153,6 @@ export const useAccountStore = create<AccountState>()(
             email: data.email,
             profilePicture: data.avatarUrl,
             createdAt: data.createdAt,
-            formattedCreatedAt: capitalizedDate,
             cpf: data.cpf || null,
             documentType: data.documentType || null,
             documentNumber: data.documentNumber || null,
@@ -212,6 +175,13 @@ export const useAccountStore = create<AccountState>()(
     }),
     {
       name: "account-storage",
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const cutoff = Date.now() - 5 * 60 * 1000;
+        state.activeOperations = state.activeOperations.filter(
+          (op) => op.expiryTime > cutoff,
+        );
+      },
       partialize: (state) => ({
         name: state.name,
         user: state.user,
@@ -222,7 +192,6 @@ export const useAccountStore = create<AccountState>()(
         selectedAccount: state.selectedAccount,
         activeOperations: state.activeOperations,
         createdAt: state.createdAt,
-        formattedCreatedAt: state.formattedCreatedAt,
         cpf: state.cpf,
         documentType: state.documentType,
         documentNumber: state.documentNumber,

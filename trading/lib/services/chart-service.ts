@@ -37,11 +37,21 @@ export const chartService = {
     limit = 500,
   ): Promise<CandleData[]> {
     const symbol = pair.toUpperCase();
+    const params = new URLSearchParams({
+      symbol,
+      timeframe,
+      limit: String(Math.min(limit, 1000)),
+      _: String(Date.now()),
+    });
 
     const response = await fetch(
-      `/api/market/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&limit=${Math.min(limit, 1000)}`,
+      `/api/market/candles?${params.toString()}`,
       {
         cache: "no-store",
+        headers: {
+          "cache-control": "no-cache",
+          pragma: "no-cache",
+        },
       },
     );
     const json = await response.json();

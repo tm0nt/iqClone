@@ -42,6 +42,18 @@ const TIINGO_RESAMPLE_MAP: Record<string, string> = {
   "1d": "1day",
   "1w": "1week",
 };
+const TIINGO_BAR_MS: Record<string, number> = {
+  "1min": 60_000,
+  "5min": 300_000,
+  "15min": 900_000,
+  "30min": 1_800_000,
+  "1hour": 3_600_000,
+  "2hour": 7_200_000,
+  "4hour": 14_400_000,
+  "1day": 86_400_000,
+  "1week": 604_800_000,
+};
+const TIINGO_MAX_RETRIES = 3;
 
 const INVALID_TOKENS = new Set([
   "",
@@ -95,6 +107,11 @@ const marketDataCacheState: MarketDataCacheState =
 
 if (!globalThis.__MARKET_DATA_CACHE_STATE__) {
   globalThis.__MARKET_DATA_CACHE_STATE__ = marketDataCacheState;
+}
+
+export function invalidateMarketDataCaches() {
+  marketDataCacheState.values.clear();
+  marketDataCacheState.inflight.clear();
 }
 
 function getCachedValue<T>(key: string): T | null {
@@ -151,41 +168,41 @@ function getPriceCacheTtlMs(source: string) {
     case "binance":
       return 1_000;
     case "itick":
-      return 5_000;
-    case "tiingo":
-      return 10_000;
-    default:
       return 2_000;
+    case "tiingo":
+      return 1_500;
+    default:
+      return 1_000;
   }
 }
 
 function getCandlesCacheTtlMs(source: string, timeframe: string) {
   if (timeframe === "1d" || timeframe === "1w") {
-    return source === "binance" ? 60_000 : 5 * 60_000;
+    return source === "binance" ? 15_000 : 10_000;
   }
 
   switch (source) {
     case "binance":
-      return 5_000;
+      return 2_000;
     case "itick":
-      return 15_000;
+      return 3_000;
     case "tiingo":
-      return 30_000;
+      return 2_000;
     default:
-      return 10_000;
+      return 2_000;
   }
 }
 
 function getSnapshotCacheTtlMs(source: string) {
   switch (source) {
     case "binance":
-      return 3_000;
+      return 2_000;
     case "itick":
-      return 10_000;
+      return 3_000;
     case "tiingo":
-      return 15_000;
+      return 2_000;
     default:
-      return 5_000;
+      return 2_000;
   }
 }
 
@@ -331,7 +348,28 @@ export function getMarketSource(symbol: string): "binance" | "itick" | "tiingo" 
 
 export async function fetchMarketPrice(symbol: string) {
   const context = await resolveProviderContext(symbol);
-  return fetchMarketPriceBySource(context.provider.slug, context.marketSymbol);
+  const primarySlug = context.provider.slug;
+
+  try {
+    return await fetchMarketPriceBySource(primarySlug, context.marketSymbol);
+  } catch (primaryError) {
+    if (!isRetriableError(primaryError)) throw primaryError;
+
+    const fallbackSlug = isCryptoSymbol(symbol) ? "tiingo" : null;
+    if (!fallbackSlug || fallbackSlug === primarySlug) throw primaryError;
+
+    const providers = await getMarketProvidersMap();
+    const fallbackProvider = providers.get(fallbackSlug);
+    if (!fallbackProvider || fallbackProvider.isActive === false) throw primaryError;
+
+    console.warn(
+      `[market-data] Provider ${primarySlug} price failed for ${symbol} (${
+        primaryError instanceof Error ? primaryError.message : String(primaryError)
+      }), fallback → ${fallbackSlug}`,
+    );
+
+    return fetchMarketPriceBySource(fallbackSlug, context.marketSymbol);
+  }
 }
 
 export async function fetchMarketPriceBySource(source: string, symbol: string) {
@@ -365,13 +403,76 @@ export async function fetchMarketCandles(
   timeframe: string,
   limit = 500,
 ): Promise<CandleData[]> {
+  const { candles } = await fetchResolvedMarketCandles(symbol, timeframe, limit);
+  return candles;
+}
+
+function isRetriableError(error: unknown): boolean {
+  if (error instanceof MarketDataError) {
+    // These are intentional — never retry:
+    // 400 = bad request (wrong symbol/params), 401 = unauthorized, 503 = provider disabled
+    if (error.status === 400 || error.status === 401 || error.status === 503) return false;
+    // Everything else is retriable: 403/418/429/451 (geo-block, rate-limit, legal),
+    // 5xx (server errors), 0 (network-level failure)
+    return true;
+  }
+  // Native fetch failures: network error (TypeError), timeout (AbortError / TimeoutError / DOMException)
+  if (error instanceof TypeError) return true;
+  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) return true;
+  if (typeof DOMException !== "undefined" && error instanceof DOMException) return true;
+  return false;
+}
+
+export async function fetchResolvedMarketCandles(
+  symbol: string,
+  timeframe: string,
+  limit = 500,
+): Promise<{
+  source: "binance" | "itick" | "tiingo";
+  candles: CandleData[];
+}> {
   const context = await resolveProviderContext(symbol);
-  return fetchMarketCandlesBySource(
-    context.provider.slug,
-    context.marketSymbol,
-    timeframe,
-    limit,
-  );
+  const primarySlug = context.provider.slug;
+
+  try {
+    const candles = await fetchMarketCandlesBySource(
+      primarySlug,
+      context.marketSymbol,
+      timeframe,
+      limit,
+    );
+    return {
+      source: primarySlug as "binance" | "itick" | "tiingo",
+      candles,
+    };
+  } catch (primaryError) {
+    if (!isRetriableError(primaryError)) throw primaryError;
+
+    // For crypto: fallback to Tiingo if primary (Binance) fails
+    const fallbackSlug = isCryptoSymbol(symbol) ? "tiingo" : null;
+    if (!fallbackSlug || fallbackSlug === primarySlug) throw primaryError;
+
+    const providers = await getMarketProvidersMap();
+    const fallbackProvider = providers.get(fallbackSlug);
+    if (!fallbackProvider || fallbackProvider.isActive === false) throw primaryError;
+
+    console.warn(
+      `[market-data] Provider ${primarySlug} failed for ${symbol} (${
+        primaryError instanceof Error ? primaryError.message : String(primaryError)
+      }), fallback → ${fallbackSlug}`,
+    );
+
+    const candles = await fetchMarketCandlesBySource(
+      fallbackSlug,
+      context.marketSymbol,
+      timeframe,
+      limit,
+    );
+    return {
+      source: fallbackSlug as "binance" | "itick" | "tiingo",
+      candles,
+    };
+  }
 }
 
 export async function fetchMarketCandlesBySource(
@@ -452,7 +553,7 @@ async function fetchBinancePrice(provider: ProviderRecord, symbol: string) {
 
   if (!response.ok) {
     throw new MarketDataError(
-      `Binance price request failed for ${symbol}`,
+      `Binance price request failed for ${symbol} (HTTP ${response.status})`,
       response.status,
     );
   }
@@ -494,7 +595,7 @@ async function fetchBinanceCandles(
 
   if (!response.ok) {
     throw new MarketDataError(
-      `Binance candles request failed for ${symbol}`,
+      `Binance candles request failed for ${symbol} (HTTP ${response.status})`,
       response.status,
     );
   }
@@ -693,6 +794,76 @@ function getTiingoAuthHeaders(_provider: ProviderRecord, token: string) {
   return { Authorization: `Token ${token}` };
 }
 
+function buildTiingoTimeWindow(
+  resampleFreq: string,
+  limit: number,
+  market: "crypto" | "forex",
+  attempt: number,
+) {
+  const clampedLimit = Math.min(Math.max(limit, 1), 1000);
+  const barMs = TIINGO_BAR_MS[resampleFreq] ?? 300_000;
+  const baseLookbackMs = barMs * clampedLimit;
+  const expansionMultiplier = market === "forex" ? 4 : 2;
+  const minimumLookbackMs =
+    market === "forex"
+      ? resampleFreq === "1day" || resampleFreq === "1week"
+        ? 45 * 24 * 60 * 60 * 1000
+        : 72 * 60 * 60 * 1000
+      : resampleFreq === "1day" || resampleFreq === "1week"
+        ? 14 * 24 * 60 * 60 * 1000
+        : 6 * 60 * 60 * 1000;
+  const retryMultiplier = attempt === 0 ? 1 : attempt === 1 ? 3 : 7;
+  const lookbackMs = Math.max(
+    baseLookbackMs * expansionMultiplier * retryMultiplier,
+    minimumLookbackMs,
+  );
+  const endDateMs = Date.now() + barMs;
+
+  return {
+    startDate: new Date(endDateMs - lookbackMs).toISOString(),
+    endDate: new Date(endDateMs).toISOString(),
+  };
+}
+
+function normalizeTiingoCandles(
+  candles: CandleData[],
+  limit: number,
+): CandleData[] {
+  const deduplicated = new Map<number, CandleData>();
+
+  for (const candle of candles) {
+    const date = Number(candle.Date);
+    const open = Number(candle.Open);
+    const high = Number(candle.High);
+    const low = Number(candle.Low);
+    const close = Number(candle.Close);
+    const volume = Number(candle.Volume) || 0;
+
+    if (
+      !Number.isFinite(date) ||
+      !Number.isFinite(open) ||
+      !Number.isFinite(high) ||
+      !Number.isFinite(low) ||
+      !Number.isFinite(close)
+    ) {
+      continue;
+    }
+
+    deduplicated.set(date, {
+      Date: date,
+      Open: open,
+      High: high,
+      Low: low,
+      Close: close,
+      Volume: volume,
+    });
+  }
+
+  return [...deduplicated.values()]
+    .sort((left, right) => left.Date - right.Date)
+    .slice(-Math.min(Math.max(limit, 1), 1000));
+}
+
 function toTiingoCryptoTicker(symbol: string) {
   // Tiingo crypto uses e.g. "btcusd" not "btcusdt". Strip trailing "T" from USDT pairs.
   const s = symbol.toLowerCase();
@@ -768,50 +939,65 @@ async function fetchTiingoCryptoCandles(
 ): Promise<CandleData[]> {
   const ticker = toTiingoCryptoTicker(symbol);
   const resampleFreq = TIINGO_RESAMPLE_MAP[timeframe] ?? "5min";
+  const headers = getTiingoAuthHeaders(provider, token);
 
-  const msPerBar: Record<string, number> = {
-    "1min": 60_000,
-    "5min": 300_000,
-    "15min": 900_000,
-    "30min": 1_800_000,
-    "1hour": 3_600_000,
-    "2hour": 7_200_000,
-    "4hour": 14_400_000,
-    "1day": 86_400_000,
-    "1week": 604_800_000,
-  };
-  const barsMs = (msPerBar[resampleFreq] ?? 300_000) * Math.min(limit, 1000);
-  const startDate = new Date(Date.now() - barsMs).toISOString().split("T")[0];
-
-  const url = `${provider.restBaseUrl}/tiingo/crypto/prices?tickers=${ticker}&startDate=${startDate}&resampleFreq=${resampleFreq}`;
-  const response = await fetchJson(url, {
-    headers: getTiingoAuthHeaders(provider, token),
-  });
-
-  handleTiingoAuthError(provider, response);
-  if (!response.ok) {
-    throw new MarketDataError(
-      `${provider.name} crypto candles request failed for ${symbol}`,
-      response.status,
+  for (let attempt = 0; attempt < TIINGO_MAX_RETRIES; attempt += 1) {
+    const { startDate, endDate } = buildTiingoTimeWindow(
+      resampleFreq,
+      limit,
+      "crypto",
+      attempt,
     );
+    const url = buildProviderUrl(
+      provider,
+      "/tiingo/crypto/prices",
+      {
+        tickers: ticker,
+        startDate,
+        endDate,
+        resampleFreq,
+      },
+      null,
+    );
+    const response = await fetchJson(url, { headers });
+
+    handleTiingoAuthError(provider, response);
+    if (!response.ok) {
+      throw new MarketDataError(
+        `${provider.name} crypto candles request failed for ${symbol}`,
+        response.status,
+      );
+    }
+
+    const data = await response.json();
+    const entry = Array.isArray(data) ? data[0] : null;
+    const priceData = entry?.priceData;
+
+    if (!Array.isArray(priceData)) {
+      throw new MarketDataError(
+        `Invalid ${provider.name} crypto candles payload`,
+        502,
+      );
+    }
+
+    const candles = normalizeTiingoCandles(
+      priceData.map((candle: any) => ({
+        Date: new Date(candle.date).getTime(),
+        Open: Number(candle.open),
+        High: Number(candle.high),
+        Low: Number(candle.low),
+        Close: Number(candle.close),
+        Volume: Number(candle.volume) || 0,
+      })),
+      limit,
+    );
+
+    if (candles.length > 0 || attempt === TIINGO_MAX_RETRIES - 1) {
+      return candles;
+    }
   }
 
-  const data = await response.json();
-  const entry = Array.isArray(data) ? data[0] : null;
-  const priceData = entry?.priceData;
-
-  if (!Array.isArray(priceData)) {
-    throw new MarketDataError(`Invalid ${provider.name} crypto candles payload`, 502);
-  }
-
-  return priceData.slice(-limit).map((candle: any) => ({
-    Date: new Date(candle.date).getTime(),
-    Open: Number(candle.open),
-    High: Number(candle.high),
-    Low: Number(candle.low),
-    Close: Number(candle.close),
-    Volume: Number(candle.volume) || 0,
-  }));
+  return [];
 }
 
 // ---------- Tiingo Forex ----------
@@ -860,48 +1046,62 @@ async function fetchTiingoForexCandles(
 ): Promise<CandleData[]> {
   const ticker = toTiingoForexTicker(symbol);
   const resampleFreq = TIINGO_RESAMPLE_MAP[timeframe] ?? "5min";
+  const headers = getTiingoAuthHeaders(provider, token);
 
-  const msPerBar: Record<string, number> = {
-    "1min": 60_000,
-    "5min": 300_000,
-    "15min": 900_000,
-    "30min": 1_800_000,
-    "1hour": 3_600_000,
-    "2hour": 7_200_000,
-    "4hour": 14_400_000,
-    "1day": 86_400_000,
-    "1week": 604_800_000,
-  };
-  const barsMs = (msPerBar[resampleFreq] ?? 300_000) * Math.min(limit, 1000);
-  const startDate = new Date(Date.now() - barsMs).toISOString().split("T")[0];
-
-  const url = `${provider.restBaseUrl}/tiingo/fx/${ticker}/prices?startDate=${startDate}&resampleFreq=${resampleFreq}`;
-  const response = await fetchJson(url, {
-    headers: getTiingoAuthHeaders(provider, token),
-  });
-
-  handleTiingoAuthError(provider, response);
-  if (!response.ok) {
-    throw new MarketDataError(
-      `${provider.name} forex candles request failed for ${symbol}`,
-      response.status,
+  for (let attempt = 0; attempt < TIINGO_MAX_RETRIES; attempt += 1) {
+    const { startDate, endDate } = buildTiingoTimeWindow(
+      resampleFreq,
+      limit,
+      "forex",
+      attempt,
     );
+    const url = buildProviderUrl(
+      provider,
+      `/tiingo/fx/${ticker}/prices`,
+      {
+        startDate,
+        endDate,
+        resampleFreq,
+      },
+      null,
+    );
+    const response = await fetchJson(url, { headers });
+
+    handleTiingoAuthError(provider, response);
+    if (!response.ok) {
+      throw new MarketDataError(
+        `${provider.name} forex candles request failed for ${symbol}`,
+        response.status,
+      );
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      throw new MarketDataError(
+        `Invalid ${provider.name} forex candles payload`,
+        502,
+      );
+    }
+
+    const candles = normalizeTiingoCandles(
+      data.map((candle: any) => ({
+        Date: new Date(candle.date).getTime(),
+        Open: Number(candle.open),
+        High: Number(candle.high),
+        Low: Number(candle.low),
+        Close: Number(candle.close),
+        Volume: 0,
+      })),
+      limit,
+    );
+
+    if (candles.length > 0 || attempt === TIINGO_MAX_RETRIES - 1) {
+      return candles;
+    }
   }
 
-  const data = await response.json();
-
-  if (!Array.isArray(data)) {
-    throw new MarketDataError(`Invalid ${provider.name} forex candles payload`, 502);
-  }
-
-  return data.slice(-limit).map((candle: any) => ({
-    Date: new Date(candle.date).getTime(),
-    Open: Number(candle.open),
-    High: Number(candle.high),
-    Low: Number(candle.low),
-    Close: Number(candle.close),
-    Volume: 0, // Forex top-of-book doesn't include volume
-  }));
+  return [];
 }
 
 // ---------- Tiingo Unified (routes to crypto or forex) ----------

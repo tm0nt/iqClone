@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAccountStore } from "@/store/account-store";
 
-const SYNC_INTERVAL_MS = 30_000; // sync every 30 seconds (operations also trigger sync on settle)
+const SYNC_INTERVAL_MS = 15_000; // sync every 15 seconds (operations also trigger sync on settle)
 
 /**
  * Periodically syncs the user's balance from the database (via API)

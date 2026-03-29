@@ -59,34 +59,42 @@ export async function POST(request: Request) {
       );
     }
 
+    // Phase 1: Fetch all close prices in parallel
+    const operationsWithPrices = await Promise.all(
+      operations.map(async (operation) => {
+        const pair = operation.pairId
+          ? await prisma.tradingPair.findUnique({
+              where: { id: operation.pairId },
+              select: {
+                priceSource: true,
+                priceSymbol: true,
+                marketProvider: {
+                  select: { slug: true },
+                },
+              },
+            })
+          : null;
+        const priceSource =
+          operation.providerSlug ||
+          pair?.marketProvider?.slug ||
+          pair?.priceSource ||
+          "tiingo";
+        const marketSymbol =
+          operation.marketSymbol ||
+          pair?.priceSymbol ||
+          operation.ativo;
+        const closePriceData = await fetchOperationClosePrice(
+          priceSource,
+          marketSymbol,
+        );
+        return { operation, closePriceData };
+      }),
+    );
+
+    // Phase 2: Process sells sequentially (same user, balance mutations)
     const results = [];
 
-    for (const operation of operations) {
-      const pair = operation.pairId
-        ? await prisma.tradingPair.findUnique({
-            where: { id: operation.pairId },
-            select: {
-              priceSource: true,
-              priceSymbol: true,
-              marketProvider: {
-                select: { slug: true },
-              },
-            },
-          })
-        : null;
-      const priceSource =
-        operation.providerSlug ||
-        pair?.marketProvider?.slug ||
-        pair?.priceSource ||
-        "tiingo";
-      const marketSymbol =
-        operation.marketSymbol ||
-        pair?.priceSymbol ||
-        operation.ativo;
-      const closePriceData = await fetchOperationClosePrice(
-        priceSource,
-        marketSymbol,
-      );
+    for (const { operation, closePriceData } of operationsWithPrices) {
       const sold = await tradeService.sellOperation(
         operation.id,
         closePriceData.price,

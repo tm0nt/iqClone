@@ -21,15 +21,15 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
   return (
     <div className="relative">
       {/* Cabeçalho do card */}
-      <div className="p-8">
-        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-black to-platform-overlay-hover">
+      <div className="px-8 pb-4 pt-8">
+        <h1 className="text-2xl font-bold text-black">
           {title}
         </h1>
-        <p className="text-sm text-platform-input-subtle mt-2">{subtitle}</p>
+        <p className="mt-2 text-sm text-black/55">{subtitle}</p>
       </div>
 
       {/* Corpo do card */}
-      <div className="p-8">{children}</div>
+      <div className="px-8 pb-8 pt-2">{children}</div>
     </div>
   );
 }

@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { configs } from "@/db/schema";
+import { resolveAdminAssetUrl } from "@shared/platform/asset-urls";
+
+function normalizeConfigAssets<T extends { logoUrlDark: string; logoUrlWhite: string }>(
+  config: T,
+) {
+  const adminBaseUrl =
+    process.env.ADMIN_BASE_URL?.trim() ??
+    process.env.NEXT_PUBLIC_ADMIN_URL?.trim() ??
+    "";
+
+  return {
+    ...config,
+    logoUrlDark:
+      resolveAdminAssetUrl(config.logoUrlDark, adminBaseUrl) ||
+      config.logoUrlDark,
+    logoUrlWhite:
+      resolveAdminAssetUrl(config.logoUrlWhite, adminBaseUrl) ||
+      config.logoUrlWhite,
+  };
+}
 
 export async function GET(request: NextRequest) {
 
@@ -10,7 +30,8 @@ export async function GET(request: NextRequest) {
 
     if (!config) {
       // Se não existir, criar com valores padrão
-      const [newConfig] = await db.insert(configs).values({}).returning();
+      const [createdConfig] = await db.insert(configs).values({}).returning();
+      const newConfig = normalizeConfigAssets(createdConfig);
       return NextResponse.json({
         logo: newConfig.logoUrlDark,
         logoDark: newConfig.logoUrlDark,
@@ -20,12 +41,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const normalizedConfig = normalizeConfigAssets(config);
+
     return NextResponse.json({
-      logo: config.logoUrlDark,
-      logoDark: config.logoUrlDark,
-      logoWhite: config.logoUrlWhite,
-      nome: config.nomeSite,
-      backgroundColor: config.backgroundColor,
+      logo: normalizedConfig.logoUrlDark,
+      logoDark: normalizedConfig.logoUrlDark,
+      logoWhite: normalizedConfig.logoUrlWhite,
+      nome: normalizedConfig.nomeSite,
+      backgroundColor: normalizedConfig.backgroundColor,
     });
   } catch (error) {
     console.error("Erro ao buscar configurações:", error);

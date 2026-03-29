@@ -5,6 +5,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { StockChart } from "@/components/trading-view";
 import { MobileTradingPanel } from "@/components/mobile-trading-panel";
 import { ToastContainer } from "@/components/ui/toast";
+import {
+  SettlementToastContainer,
+  showSettlementToast,
+} from "@/components/ui/settlement-toast";
 import type { Order } from "@/components/type";
 import TradingPanel from "@/components/trading-panel";
 import Header from "@/components/header";
@@ -115,6 +119,14 @@ export default function Home() {
           createdAt: operation.openedAt,
         },
       );
+
+      showSettlementToast({
+        image: selectedCrypto?.image || "",
+        assetName: operation.asset,
+        result: operation.result,
+        profit: operation.profit,
+        value: operation.value,
+      });
     },
   });
 
@@ -308,6 +320,7 @@ export default function Home() {
             <Footer />
           </div>
       </main>
+      <SettlementToastContainer />
     </ToastContainer>
   );
 }

@@ -76,6 +76,13 @@ export const userRepository = {
         },
       });
 
+      await tx.affiliate.create({
+        data: {
+          userId: user.id,
+          tipoComissao: null,
+        },
+      });
+
       return user;
     });
   },

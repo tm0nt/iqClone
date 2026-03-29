@@ -31,6 +31,44 @@ interface UseActiveOperationsOptions {
   onSyncPending?: (operations: SyncedPendingOperation[]) => void;
 }
 
+/** Raw operation shape returned by /api/account/operations/pending */
+interface RawOperation {
+  id: string;
+  resultado: "ganho" | "perda" | "pendente";
+  ativo: string;
+  previsao: string;
+  valor: number;
+  receita: number;
+  abertura: number;
+  fechamento: number | null;
+  tempo: string;
+  data: string;
+  tipo: "demo" | "real";
+  expiresAt: string | null;
+  resolvedAt: string | null;
+  payoutRateSnapshot: number;
+}
+
+/** Maps raw API fields to the common SyncedPendingOperation shape. */
+function toSyncedOperation(op: RawOperation): SyncedPendingOperation {
+  return {
+    id: op.id,
+    asset: op.ativo,
+    type: op.previsao === "call" ? "buy" : "sell",
+    accountType: op.tipo,
+    value: op.valor,
+    timeframe: op.tempo,
+    entryTime: new Date(op.data).toLocaleString("en-US"),
+    openedAt: new Date(op.data).getTime(),
+    expiryTime: op.expiresAt
+      ? new Date(op.expiresAt).getTime()
+      : new Date(op.resolvedAt ?? op.data).getTime(),
+    progress: 100,
+    entryPrice: op.abertura,
+    expectedProfit: op.valor * (op.payoutRateSnapshot || 0),
+  };
+}
+
 /**
  * Polls the server for pending operations and syncs them with
  * the Zustand store. When an operation is settled server-side
@@ -57,39 +95,11 @@ export function useActiveOperations(options: UseActiveOperationsOptions = {}) {
       });
       if (!res.ok) return;
 
-      const operations: Array<{
-        id: string;
-        resultado: "ganho" | "perda" | "pendente";
-        ativo: string;
-        previsao: string;
-        valor: number;
-        receita: number;
-        abertura: number;
-        fechamento: number | null;
-        tempo: string;
-        data: string;
-        tipo: "demo" | "real";
-        expiresAt: string | null;
-        resolvedAt: string | null;
-        payoutRateSnapshot: number;
-      }> = await res.json();
+      const operations: RawOperation[] = await res.json();
 
       const pendingOperations: SyncedPendingOperation[] = operations
         .filter((op) => op.resultado === "pendente" && op.expiresAt)
-        .map((op) => ({
-          id: op.id,
-          asset: op.ativo,
-          type: op.previsao === "call" ? "buy" : "sell",
-          accountType: op.tipo,
-          value: op.valor,
-          timeframe: op.tempo,
-          entryTime: new Date(op.data).toLocaleString("en-US"),
-          openedAt: new Date(op.data).getTime(),
-          expiryTime: new Date(op.expiresAt as string).getTime(),
-          progress: 100,
-          entryPrice: op.abertura,
-          expectedProfit: op.valor * (op.payoutRateSnapshot || 0),
-        }));
+        .map(toSyncedOperation);
 
       syncActiveOperations(pendingOperations);
       onSyncPendingRef.current?.(pendingOperations);
@@ -107,21 +117,10 @@ export function useActiveOperations(options: UseActiveOperationsOptions = {}) {
         const result = op.resultado === "ganho" ? "win" : "loss";
         const closePrice = op.fechamento ?? 0;
         const profit = op.resultado === "ganho" ? op.receita : 0;
+        const base = toSyncedOperation(op);
         const settledOperation: SyncedSettledOperation = {
-          id: op.id,
-          asset: op.ativo,
-          type: op.previsao === "call" ? "buy" : "sell",
-          accountType: op.tipo,
-          value: op.valor,
-          timeframe: op.tempo,
-          entryTime: new Date(op.data).toLocaleString("en-US"),
-          openedAt: new Date(op.data).getTime(),
-          expiryTime: op.expiresAt
-            ? new Date(op.expiresAt).getTime()
-            : new Date(op.resolvedAt ?? op.data).getTime(),
+          ...base,
           progress: 0,
-          entryPrice: op.abertura,
-          expectedProfit: op.valor * (op.payoutRateSnapshot || 0),
           result,
           closePrice,
           profit,
@@ -129,12 +128,12 @@ export function useActiveOperations(options: UseActiveOperationsOptions = {}) {
 
         removeOperation(op.id);
         addOperationResult({
-          id: op.id,
-          asset: op.ativo,
-          type: op.previsao === "call" ? "buy" : "sell",
-          value: op.valor,
-          timeframe: op.tempo,
-          entryTime: new Date(op.data).toLocaleString("en-US"),
+          id: base.id,
+          asset: base.asset,
+          type: base.type,
+          value: base.value,
+          timeframe: base.timeframe,
+          entryTime: base.entryTime,
           expiryTime: "",
           openPrice: op.abertura.toFixed(4),
           closePrice: closePrice.toFixed(4),
@@ -145,6 +144,12 @@ export function useActiveOperations(options: UseActiveOperationsOptions = {}) {
         onSettleRef.current?.(settledOperation);
         handledSettlementsRef.current.add(op.id);
         didSettle = true;
+      }
+
+      // Prune handled set to prevent unbounded memory growth
+      if (handledSettlementsRef.current.size > 500) {
+        const entries = [...handledSettlementsRef.current];
+        handledSettlementsRef.current = new Set(entries.slice(-200));
       }
 
       if (didSettle) {
