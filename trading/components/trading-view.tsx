@@ -788,7 +788,8 @@ export function StockChart({
         lastZoomTickRef.current = 0;
         if (dateAxis && cnt > VISIBLE_CANDLE_COUNT && isAtEndRef.current) {
           const startIndex = cnt - VISIBLE_CANDLE_COUNT;
-          dateAxis.zoom(startIndex / cnt, 1, false);
+          const extraMax = dateAxis.get("extraMax") ?? 0;
+          dateAxis.zoom(startIndex / cnt, 1 + extraMax, false);
           didZoom = true;
         }
       }
@@ -996,9 +997,9 @@ export function StockChart({
               cornerRadiusBL: 0,
               cornerRadiusBR: 0,
               strokeOpacity: 1,
-              width: am5.percent(70),
+              width: am5.percent(95),
               fillOpacity: 1,
-              strokeWidth: 1,
+              strokeWidth: 2,
             });
             newMainSeries.columns.template.adapters.add(
               "fill",
@@ -1145,9 +1146,10 @@ export function StockChart({
 
         newMainSeries.events.once?.("datavalidated", () => {
           const len = newMainSeries.data.length;
-          const startIndex = Math.max(0, len - VISIBLE_CANDLE_COUNT);
-          const start = len > 0 ? startIndex / len : 0;
-          dateAxis.zoom(start, 1, false);
+          const extraMax = dateAxis.get("extraMax") ?? 0;
+          const end = 1 + extraMax;
+          const start = len > 0 ? Math.max(0, end - VISIBLE_CANDLE_COUNT / len) : 0;
+          dateAxis.zoom(start, end, false);
           isAtEndRef.current = true;
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -1440,14 +1442,14 @@ export function StockChart({
 
     const dateAxis = mainPanel.xAxes.push(
       am5xy.GaplessDateAxis.new(root, {
-        extraMax: 0.06,
+        extraMax: 0.02,
         baseInterval: { timeUnit: "minute", count: 1 },
         groupData: false,
         renderer: am5xy.AxisRendererX.new(root, {
-          minGridDistance: 70,
-          minorGridEnabled: true,
-          cellStartLocation: 0.15,
-          cellEndLocation: 0.85,
+          minGridDistance: 50,
+          minorGridEnabled: false,
+          cellStartLocation: 0.05,
+          cellEndLocation: 0.95,
         }),
         tooltip: am5.Tooltip.new(root, {}),
       }),
@@ -1463,8 +1465,7 @@ export function StockChart({
     dateAxis
       .get("renderer")
       .grid.template.setAll({
-        stroke: am5.color(CHART_COLORS.grid),
-        strokeOpacity: 0.2,
+        strokeOpacity: 0,
       });
     dateAxisRef.current = dateAxis;
 
@@ -1894,7 +1895,7 @@ export function StockChart({
     const nextEnd = nextStart + nextRange;
 
     dateAxis.zoom(nextStart, nextEnd, false);
-    isAtEndRef.current = nextEnd > 0.98;
+    isAtEndRef.current = nextEnd > 1.0;
   }, []);
 
   const focusLatestCandle = useCallback(() => {
@@ -1904,11 +1905,15 @@ export function StockChart({
 
     if (!dateAxis) return;
 
+    const extraMax = dateAxis.get("extraMax") ?? 0;
+    const end = 1 + extraMax;
+
     if (count <= VISIBLE_CANDLE_COUNT) {
-      dateAxis.zoom(0, 1, false);
+      dateAxis.zoom(0, end, false);
     } else {
-      const start = Math.max(0, (count - VISIBLE_CANDLE_COUNT) / count);
-      dateAxis.zoom(start, 1, false);
+      const visibleFraction = VISIBLE_CANDLE_COUNT / count;
+      const start = Math.max(0, end - visibleFraction);
+      dateAxis.zoom(start, end, false);
     }
 
     isAtEndRef.current = true;

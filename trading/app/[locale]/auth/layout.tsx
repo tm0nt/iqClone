@@ -1,16 +1,19 @@
-/**
- * Layout para a seção de autenticação
- *
- * Fornece um layout consistente para todas as páginas de autenticação,
- * incluindo o container de toast para notificações.
- */
-
 import type React from "react";
+import { ServerLogo } from "@/components/server-logo";
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex justify-center px-4 pt-8">
+        <div className="pointer-events-auto flex items-center justify-center">
+          <ServerLogo width={180} variant="dark" />
+        </div>
+      </div>
+      {children}
+    </>
+  );
 }

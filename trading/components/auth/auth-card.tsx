@@ -25,7 +25,7 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
         <h1 className="text-2xl font-bold text-black">
           {title}
         </h1>
-        <p className="mt-2 text-sm text-black/55">{subtitle}</p>
+        <p className="mt-2 text-sm text-black/65">{subtitle}</p>
       </div>
 
       {/* Corpo do card */}

@@ -8,7 +8,6 @@ import { ToastContainer } from "@/components/ui/toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import AuthFooter from "@/components/auth/auth-footer";
-import { Logo } from "@/components/logo";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -26,12 +25,6 @@ export default function AuthPage() {
   return (
     <ToastContainer>
       <div className="min-h-screen platform-auth-bg theme-transition relative overflow-hidden">
-        <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex justify-center px-4 pt-8">
-          <div className="pointer-events-auto flex items-center justify-center">
-            <Logo width={180} variant="dark" />
-          </div>
-        </div>
-
         <div className="flex min-h-screen items-center justify-center px-4 pb-8 pt-32">
           <motion.div
             className="w-full max-w-md relative z-10"

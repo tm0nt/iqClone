@@ -96,6 +96,10 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} style={brandingCssVars}>
       <head>
+        {/* Preconnect to admin asset origin so logo/images load faster */}
+        {process.env.ADMIN_BASE_URL && (
+          <link rel="preconnect" href={process.env.ADMIN_BASE_URL} />
+        )}
         {config.faviconUrl ? (
           <link rel="icon" href={config.faviconUrl} />
         ) : (
