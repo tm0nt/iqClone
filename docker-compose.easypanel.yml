@@ -1,0 +1,102 @@
+# =====================================================================
+#  Muniz Platform — EasyPanel deployment
+# =====================================================================
+#
+#  Este arquivo é uma REFERÊNCIA para configurar os serviços no EasyPanel.
+#  No EasyPanel, cada serviço é criado individualmente pela interface.
+#  Use este arquivo como guia para saber as variáveis e configurações
+#  de cada serviço.
+#
+#  Ordem de criação:
+#    1. PostgreSQL (database)
+#    2. Trading   (depende do banco — roda migrations no startup)
+#    3. Admin     (depende do banco — precisa que trading já tenha rodado migrations)
+#    4. Afiliados (depende do banco — precisa que trading já tenha rodado migrations)
+#
+# =====================================================================
+
+services:
+  # =================== PostgreSQL ===================
+  # No EasyPanel: crie como serviço "Postgres" pelo template de banco.
+  # Anote a connection string gerada.
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-muniz_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-muniz_app_password}
+      POSTGRES_DB: ${DB_NAME:-muniz_platform}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # =================== Trading ===================
+  # No EasyPanel: crie como App → Docker (GitHub repo)
+  # Build: Dockerfile path = trading/Dockerfile
+  # Build context = . (raiz do repo)
+  # Port: 3000
+  # Domain: seudominio.com (ou subdominio)
+  trading:
+    build:
+      context: .
+      dockerfile: trading/Dockerfile
+      args:
+        DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public"
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public"
+      NODE_ENV: production
+      AUTH_TRUST_HOST: "true"
+      AUTH_URL: "https://${TRADING_DOMAIN}"
+      NEXTAUTH_URL: "https://${TRADING_DOMAIN}"
+      NEXTAUTH_URL_INTERNAL: "http://localhost:3000"
+      ADMIN_BASE_URL: "https://${ADMIN_DOMAIN}"
+      SITE_DOMAIN: ${SITE_DOMAIN}
+      SITE_NAME: ${SITE_NAME:-Muniz Platform}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TIINGO_API_KEY: ${TIINGO_API_KEY:-}
+    volumes:
+      - kyc_uploads:/app/private/kyc
+    expose:
+      - "3000"
+
+  # =================== Admin ===================
+  # No EasyPanel: crie como App → Docker (GitHub repo)
+  # Build: Dockerfile path = admin/Dockerfile
+  # Build context = . (raiz do repo)
+  # Port: 1313
+  # Domain: admin.seudominio.com
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      NODE_ENV: production
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    volumes:
+      - admin_uploads:/app/public/uploads
+      - kyc_uploads:/app/private/kyc:ro
+    expose:
+      - "1313"
+
+  # =================== Afiliados ===================
+  # No EasyPanel: crie como App → Docker (GitHub repo)
+  # Build: Dockerfile path = afiliados/Dockerfile
+  # Build context = . (raiz do repo)
+  # Port: 3000
+  # Domain: afiliados.seudominio.com
+  afiliados:
+    build:
+      context: .
+      dockerfile: afiliados/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      ADMIN_BASE_URL: "https://${ADMIN_DOMAIN}"
+      NODE_ENV: production
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      NEXT_PUBLIC_ADMIN_URL: "https://${ADMIN_DOMAIN}"
+    expose:
+      - "3000"
+
+volumes:
+  pg_data:
+  admin_uploads:
+  kyc_uploads:

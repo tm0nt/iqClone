@@ -459,6 +459,237 @@ curl -I https://app.seudominio.com
 
 ---
 
+## Deploy via EasyPanel
+
+O EasyPanel gerencia containers Docker e fornece SSL automatico via Traefik. Voce **nao precisa do Caddy** — o EasyPanel faz o papel de reverse proxy.
+
+O EasyPanel gera dominios automaticos no formato:
+```
+https://<projeto>-<servico>.<IP>.sslip.io
+```
+Exemplo real com IP `143.198.50.12` e projeto `muniz`:
+```
+Trading:   https://muniz-trading.143.198.50.12.sslip.io
+Admin:     https://muniz-admin.143.198.50.12.sslip.io
+Afiliados: https://muniz-afiliados.143.198.50.12.sslip.io
+```
+SSL e provisionado automaticamente — sem precisar de dominio proprio.
+
+> O arquivo `docker-compose.easypanel.yml` na raiz serve como referencia para as configuracoes abaixo.
+
+---
+
+### Etapa 1 — Criar projeto e banco
+
+#### 1.1 Criar o projeto
+
+1. Acesse seu EasyPanel
+2. **Create Project** → nomeie como `muniz` (o nome vira parte do dominio)
+
+#### 1.2 PostgreSQL
+
+1. Dentro do projeto: **+ Service** → **Postgres**
+2. Configure:
+   - **Service name**: `db`
+   - **Version**: `16`
+   - **Database**: `muniz_platform`
+   - **Username**: `muniz_app`
+   - **Password**: clique em **Generate** para gerar aleatorio
+3. **Deploy** e aguarde ficar verde
+4. Va em **Connection** e copie a **Internal connection string**, que sera algo como:
+   ```
+   postgresql://muniz_app:SENHA_GERADA@muniz_db:5432/muniz_platform
+   ```
+   > Guarde essa string — vai usar nos proximos passos
+
+---
+
+### Etapa 2 — Criar os 3 servicos (sem env vars de dominio ainda)
+
+O EasyPanel so gera o dominio automatico **depois** que o servico e criado. Por isso o processo e em duas etapas: criar primeiro, pegar o dominio, depois configurar as variaveis que referenciam outros servicos.
+
+#### 2.1 Trading
+
+1. **+ Service** → **App** → nomeie `trading`
+2. **Source**:
+   - **Type**: GitHub
+   - **Repository**: seu repo
+   - **Branch**: `main`
+   - **Build Path**: `/` (raiz — obrigatorio, o Dockerfile copia a pasta `shared/`)
+   - **Dockerfile**: `trading/Dockerfile`
+3. **Build Args**:
+   ```
+   DATABASE_URL = <sua connection string do passo 1.4>?schema=public
+   ```
+4. **Environment Variables** (so o essencial por agora):
+   ```
+   DATABASE_URL    = <connection string>?schema=public
+   NODE_ENV        = production
+   AUTH_TRUST_HOST = true
+   SITE_NAME       = Nome da Plataforma
+   SITE_DOMAIN     = <IP_DO_SERVIDOR>
+   ADMIN_PASSWORD  = SuaSenhaAdmin123
+   JWT_SECRET_KEY  = <gere com: openssl rand -hex 32>
+   TIINGO_API_KEY  = <sua chave tiingo, ou deixe vazio>
+   ```
+5. **Domains**: porta `3000`, deixe o dominio automatico
+6. **Volumes**: adicione mount `/app/private/kyc` → novo volume `kyc`
+7. **Deploy**
+8. Apos o build, abra a aba **Domains** e copie o dominio gerado:
+   ```
+   https://muniz-trading.<IP>.sslip.io   ← anote isso
+   ```
+9. Verifique os logs — voce deve ver:
+   ```
+   ==> Running Prisma migrations...
+   ==> Running seed (idempotent)...
+   ==> Starting trading app...
+   ```
+
+#### 2.2 Admin
+
+1. **+ Service** → **App** → nomeie `admin`
+2. **Source**:
+   - **Build Path**: `/`
+   - **Dockerfile**: `admin/Dockerfile`
+3. **Environment Variables**:
+   ```
+   DATABASE_URL   = <connection string sem ?schema>
+   NODE_ENV       = production
+   JWT_SECRET_KEY = <mesma chave do trading>
+   ```
+4. **Domains**: porta `1313`, deixe o dominio automatico
+5. **Volumes**:
+   - `/app/public/uploads` → novo volume `admin-uploads`
+   - `/app/private/kyc` → volume `kyc` (mesmo do trading, read-only)
+6. **Deploy** e anote o dominio gerado:
+   ```
+   https://muniz-admin.<IP>.sslip.io   ← anote isso
+   ```
+
+#### 2.3 Afiliados
+
+1. **+ Service** → **App** → nomeie `afiliados`
+2. **Source**:
+   - **Build Path**: `/`
+   - **Dockerfile**: `afiliados/Dockerfile`
+3. **Environment Variables**:
+   ```
+   DATABASE_URL   = <connection string sem ?schema>
+   NODE_ENV       = production
+   JWT_SECRET_KEY = <mesma chave do trading>
+   ```
+4. **Domains**: porta `3000`, deixe o dominio automatico
+5. **Deploy** e anote o dominio gerado:
+   ```
+   https://muniz-afiliados.<IP>.sslip.io   ← anote isso
+   ```
+
+---
+
+### Etapa 3 — Completar variaveis com os dominios gerados
+
+Agora que voce tem os 3 dominios, volte em cada servico e adicione as variaveis que faltavam.
+
+#### 3.1 Atualizar o Trading
+
+Va em **trading** → **Environment** e adicione:
+
+```
+AUTH_URL             = https://muniz-trading.<IP>.sslip.io
+NEXTAUTH_URL         = https://muniz-trading.<IP>.sslip.io
+NEXTAUTH_URL_INTERNAL= http://localhost:3000
+ADMIN_BASE_URL       = https://muniz-admin.<IP>.sslip.io
+```
+
+Clique em **Save** → **Rebuild**
+
+#### 3.2 Atualizar o Afiliados
+
+Va em **afiliados** → **Environment** e adicione:
+
+```
+ADMIN_BASE_URL        = https://muniz-admin.<IP>.sslip.io
+NEXT_PUBLIC_ADMIN_URL = https://muniz-admin.<IP>.sslip.io
+```
+
+Clique em **Save** → **Rebuild**
+
+---
+
+### Etapa 4 — Verificar
+
+```
+Trading:   https://muniz-trading.<IP>.sslip.io/pt/auth
+Admin:     https://muniz-admin.<IP>.sslip.io
+Afiliados: https://muniz-afiliados.<IP>.sslip.io
+```
+
+Login admin: `admin@<IP>` / valor de `ADMIN_PASSWORD`
+
+---
+
+### Resumo das variaveis por servico
+
+#### Trading
+| Variavel                  | Valor                                                     |
+|---------------------------|-----------------------------------------------------------|
+| `DATABASE_URL`            | `postgresql://...@muniz_db:5432/muniz_platform?schema=public` |
+| `NODE_ENV`                | `production`                                              |
+| `AUTH_TRUST_HOST`         | `true`                                                    |
+| `AUTH_URL`                | `https://muniz-trading.<IP>.sslip.io`                     |
+| `NEXTAUTH_URL`            | `https://muniz-trading.<IP>.sslip.io`                     |
+| `NEXTAUTH_URL_INTERNAL`   | `http://localhost:3000`                                   |
+| `ADMIN_BASE_URL`          | `https://muniz-admin.<IP>.sslip.io`                       |
+| `SITE_DOMAIN`             | `<IP_DO_SERVIDOR>`                                        |
+| `SITE_NAME`               | `Nome da Plataforma`                                      |
+| `ADMIN_PASSWORD`          | senha forte                                               |
+| `JWT_SECRET_KEY`          | `openssl rand -hex 32`                                    |
+| `TIINGO_API_KEY`          | chave Tiingo (opcional)                                   |
+
+#### Admin
+| Variavel        | Valor                                                       |
+|-----------------|-------------------------------------------------------------|
+| `DATABASE_URL`  | `postgresql://...@muniz_db:5432/muniz_platform`             |
+| `NODE_ENV`      | `production`                                                |
+| `JWT_SECRET_KEY`| mesma chave do Trading                                      |
+
+#### Afiliados
+| Variavel               | Valor                                                  |
+|------------------------|--------------------------------------------------------|
+| `DATABASE_URL`         | `postgresql://...@muniz_db:5432/muniz_platform`        |
+| `NODE_ENV`             | `production`                                           |
+| `JWT_SECRET_KEY`       | mesma chave do Trading                                 |
+| `ADMIN_BASE_URL`       | `https://muniz-admin.<IP>.sslip.io`                    |
+| `NEXT_PUBLIC_ADMIN_URL`| `https://muniz-admin.<IP>.sslip.io`                    |
+
+---
+
+### Checklist EasyPanel
+
+- [ ] PostgreSQL running e connection string copiada
+- [ ] Trading deployado — logs mostram migrations + seed OK
+- [ ] Admin deployado — mesmo `JWT_SECRET_KEY`
+- [ ] Afiliados deployado — mesmo `JWT_SECRET_KEY`
+- [ ] Trading atualizado com `AUTH_URL`, `NEXTAUTH_URL` e `ADMIN_BASE_URL` → rebuild feito
+- [ ] Afiliados atualizado com `ADMIN_BASE_URL` → rebuild feito
+- [ ] Volume `kyc` compartilhado entre Trading (RW) e Admin (RO)
+- [ ] Login admin funcionando em `https://muniz-admin.<IP>.sslip.io`
+
+### Diferenca do Docker Compose
+
+| Aspecto          | Docker Compose (padrao)     | EasyPanel                        |
+|------------------|-----------------------------|----------------------------------|
+| Reverse proxy    | Caddy (no compose)          | Traefik (gerenciado pelo painel) |
+| SSL              | Let's Encrypt via Caddy     | Let's Encrypt via Traefik        |
+| Dominios         | Proprios (DNS manual)       | Automaticos via sslip.io         |
+| Servicos         | 5 (db + 3 apps + caddy)     | 4 (db + 3 apps, sem proxy)       |
+| Deploy           | `docker compose up`         | Interface web + GitHub           |
+| Rebuild          | `docker compose up --build` | Botao "Rebuild" no painel        |
+| Logs             | `docker compose logs -f`    | Aba "Logs" de cada servico       |
+
+---
+
 ## Volumes Persistentes
 
 | Volume          | Conteudo                          | Montado em                     |
