@@ -115,6 +115,118 @@ export default function Header({
   // Dynamic check with locale
   const isAccountPage = pathname === `/${locale}/account`;
 
+  // =================== Mobile Layout ===================
+  if (isMobile) {
+    return (
+      <header className="platform-header border-b border-platform-surface-alt px-3 py-2 h-16">
+        <div className="flex items-center justify-between h-full">
+          {isAccountPage ? (
+            <>
+              {/* ACCOUNT PAGE MOBILE: LOGO | SALDO | PROFILE | DEPOSITAR */}
+              <div className="flex items-center">
+                <Logo width={100} variant="light" useMobile />
+              </div>
+
+              <div className="flex items-center space-x-3">
+                {/* Saldo */}
+                <div
+                  ref={accountTriggerRef}
+                  className="cursor-pointer flex items-center space-x-1 hover:bg-platform-surface-alt rounded px-2 py-1 transition-colors"
+                  onClick={toggleAccountDropdown}
+                >
+                  <span
+                    className={`font-bold text-sm ${
+                      selectedAccount === "real" ? "text-platform-positive" : "text-platform-demo"
+                    }`}
+                  >
+                    {isBalanceVisible ? formatCurrency(getBalance()) : t("balanceHidden")}
+                  </span>
+                  <ChevronDown size={12} className="text-platform-overlay-muted" />
+                </div>
+
+                {/* Profile Icon */}
+                <div
+                  ref={profileTriggerRef}
+                  className="w-9 h-9 bg-platform-overlay-card rounded-full flex items-center justify-center cursor-pointer overflow-hidden hover:bg-platform-overlay-muted transition-colors"
+                  onClick={toggleProfileDropdown}
+                >
+                  {profilePicture ? (
+                    <img
+                      src={profilePicture}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "";
+                        target.className = "hidden";
+                      }}
+                    />
+                  ) : (
+                    <User size={18} className="text-white" />
+                  )}
+                </div>
+
+                {/* Depositar */}
+                <Link
+                  href="/account?section=deposit"
+                  className="border border-platform-positive text-platform-positive bg-transparent px-3 py-1.5 rounded font-medium transition-all duration-200 flex items-center hover:bg-platform-positive hover:text-black active:bg-platform-positive active:text-black"
+                >
+                  <Banknote size={18} />
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* TRADING PAGE MOBILE: LOGO | TRADEROOM | DINHEIRO */}
+              <div className="flex items-center">
+                <Logo width={100} variant="light" useMobile />
+              </div>
+
+              <div className="flex items-center space-x-3">
+                {/* Traderoom (link para account) */}
+                <Link
+                  href={`/${locale}/account`}
+                  className="flex items-center rounded-lg bg-white px-3 py-1.5 text-black transition-colors hover:bg-white/90"
+                >
+                  <span className="font-medium text-xs">{t("traderoom")}</span>
+                </Link>
+
+                {/* Dinheiro/Balance */}
+                <div
+                  ref={accountTriggerRef}
+                  className="cursor-pointer flex items-center space-x-1 hover:bg-platform-surface-alt rounded px-2 py-1 transition-colors"
+                  onClick={toggleAccountDropdown}
+                >
+                  <span
+                    className={`font-bold text-sm ${
+                      selectedAccount === "real" ? "text-platform-positive" : "text-platform-demo"
+                    }`}
+                  >
+                    {isBalanceVisible ? formatCurrency(getBalance()) : t("balanceHidden")}
+                  </span>
+                  <ChevronDown size={12} className="text-platform-overlay-muted" />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Dropdowns */}
+        <AccountDropdown
+          isOpen={isAccountDropdownOpen}
+          onClose={closeAccountDropdown}
+          onToggleBalanceVisibility={toggleBalanceVisibility}
+          isBalanceVisible={isBalanceVisible}
+          onSelectAccount={handleSelectAccount}
+          selectedAccount={selectedAccount}
+        />
+
+        <ProfileDropdown isOpen={isProfileDropdownOpen} onClose={closeProfileDropdown} isMobile={isMobile} />
+      </header>
+    );
+  }
+
+  // =================== Desktop Layout ===================
   return (
     <header className="platform-header border-b border-platform-surface-alt px-4 py-2 h-20">
       <div className="flex items-center justify-between h-full">
@@ -201,14 +313,8 @@ export default function Header({
               href="/account?section=deposit"
               className="border border-platform-positive text-platform-positive bg-transparent px-4 py-2 rounded font-medium transition-all duration-200 flex items-center space-x-2 hover:bg-platform-positive hover:text-black active:bg-platform-positive active:text-black"
             >
-              {isMobile ? (
-                <Banknote size={20} />
-              ) : (
-                <>
-                  <Banknote size={16} />
-                  <span>{t("deposit")}</span>
-                </>
-              )}
+              <Banknote size={16} />
+              <span>{t("deposit")}</span>
             </Link>
           )}
         </div>

@@ -22,6 +22,7 @@ import { useTradingGeneralConfig } from "@/hooks/useTradingGeneralConfig";
 import { useTradingSelectionState } from "@/hooks/useTradingSelectionState";
 import { useTickSound } from "@/hooks/use-tick-sound";
 import { useTranslations } from "next-intl";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 type OrdersRef = Record<string, NodeJS.Timeout>;
 type TradingSidebarPanel =
@@ -37,11 +38,13 @@ export default function Home() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number>(0);
   const [sidebarPanel, setSidebarPanel] = useState<TradingSidebarPanel>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [tradeHoverDirection, setTradeHoverDirection] = useState<
     "buy" | "sell" | null
   >(null);
   const playDealWin = useTickSound("/sound_deal_win.ogg");
   const playDealLoss = useTickSound("/sound_deal_loose.ogg");
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const ordersRef = useRef<OrdersRef>({});
   const currentPriceRef = useRef(0);
@@ -219,6 +222,15 @@ export default function Home() {
     };
   }, []);
 
+  const handleOpenMobileSidebar = useCallback(() => {
+    setMobileSidebarOpen(true);
+  }, []);
+
+  const handleCloseMobileSidebar = useCallback(() => {
+    setMobileSidebarOpen(false);
+    setSidebarPanel(null);
+  }, []);
+
   return (
     <ToastContainer>
       <main className="flex flex-col h-screen bg-black text-white overflow-hidden">
@@ -248,7 +260,29 @@ export default function Home() {
               />
             </div>
 
-            <div className="h-[60%] md:h-auto md:flex-1 overflow-hidden relative">
+            {/* MOBILE SIDEBAR OVERLAY */}
+            {isMobile && mobileSidebarOpen && (
+              <div className="fixed inset-0 z-50 flex">
+                <div
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                  onClick={handleCloseMobileSidebar}
+                />
+                <div className="relative z-10 flex h-full w-[85vw] max-w-[360px] animate-in slide-in-from-left duration-200">
+                  <TradingSidebar
+                    onSelectAsset={(crypto, addOnly) => {
+                      handleCryptoSelect(crypto, addOnly);
+                      handleCloseMobileSidebar();
+                    }}
+                    onToggleFavorite={handleToggleFavorite}
+                    activePanel={sidebarPanel}
+                    onActivePanelChange={setSidebarPanel}
+                    selectedAssetSymbol={selectedCrypto?.symbol}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-hidden relative">
               {selectedCrypto && tradingPair ? (
                 <StockChart
                   orders={orders}
@@ -272,6 +306,7 @@ export default function Home() {
                   onRemoveChart={removeChart}
                   chartBackgroundUrl={chartBackgroundUrl}
                   tradeHoverDirection={tradeHoverDirection}
+                  onOpenMobileMenu={handleOpenMobileSidebar}
                 />
               ) : pairsLoaded && !hasAvailablePairs ? (
                 <div className="flex h-full w-full items-center justify-center bg-black px-6">
@@ -301,21 +336,23 @@ export default function Home() {
                 />
               ) : null}
             </div>
-
-            <div className="md:hidden border-t border-gray-800">
-              {tradingPair ? (
-                <MobileTradingPanel
-                  currentPrice={currentPrice}
-                  onPlaceOrder={handlePlaceOrder}
-                  onOperationConfirmed={handleConfirmOperation}
-                  tradingPair={tradingPair}
-                  payoutRate={selectedCrypto?.payoutRate ?? 0.9}
-                  defaultExpirationMinutes={defaultExpirationMinutes}
-                  expirationOptions={expirationOptions}
-                />
-              ) : null}
-            </div>
           </div>
+
+          {/* MOBILE FIXED BOTTOM TRADING PANEL */}
+          <div className="md:hidden">
+            {tradingPair ? (
+              <MobileTradingPanel
+                currentPrice={currentPrice}
+                onPlaceOrder={handlePlaceOrder}
+                onOperationConfirmed={handleConfirmOperation}
+                tradingPair={tradingPair}
+                payoutRate={selectedCrypto?.payoutRate ?? 0.9}
+                defaultExpirationMinutes={defaultExpirationMinutes}
+                expirationOptions={expirationOptions}
+              />
+            ) : null}
+          </div>
+
           <div className="hidden md:flex">
             <Footer />
           </div>

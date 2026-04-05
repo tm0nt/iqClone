@@ -10,6 +10,7 @@ interface TradingChartAssetBadgeProps {
   priceChangePercent: number;
   priceChangeText: string;
   hasActiveSummary?: boolean;
+  payoutRate?: number;
   onToggleFavorite: (crypto: Crypto) => void;
   onPlayTick: () => void;
 }
@@ -21,12 +22,15 @@ export function TradingChartAssetBadge({
   priceChangePercent,
   priceChangeText,
   hasActiveSummary = false,
+  payoutRate,
   onToggleFavorite,
   onPlayTick,
 }: TradingChartAssetBadgeProps) {
+  const payoutLabel = payoutRate != null ? `+${Math.round(payoutRate * 100)}%` : null;
+
   return (
     <div
-      className={`absolute left-4 z-20 hidden items-center gap-2 md:flex ${
+      className={`absolute left-4 z-20 flex items-center gap-2 ${
         hasActiveSummary ? "top-20" : "top-4"
       }`}
     >
@@ -35,18 +39,18 @@ export function TradingChartAssetBadge({
           <img
             src={selectedCrypto.image}
             alt={selectedCrypto.name}
-            className="h-10 w-10 rounded-full object-cover"
+            className="h-8 w-8 md:h-10 md:w-10 rounded-full object-cover"
           />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-platform-overlay-surface text-xs font-semibold text-platform-text">
+          <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-platform-overlay-surface text-xs font-semibold text-platform-text">
             {selectedCrypto?.symbol?.slice(0, 2) || loadingAssetLabel.slice(0, 2)}
           </div>
         )}
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-white">
+          <div className="truncate text-xs md:text-sm font-semibold text-white">
             {selectedCrypto?.symbol || loadingAssetLabel}
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-xs leading-none">
+          <div className="mt-0.5 flex items-center gap-2 text-[10px] md:text-xs leading-none">
             <span className="font-medium text-white">${formattedCurrentPrice}</span>
             <span
               className="font-medium"
@@ -59,6 +63,14 @@ export function TradingChartAssetBadge({
             >
               {priceChangeText}
             </span>
+            {payoutLabel && (
+              <span
+                className="font-bold"
+                style={{ color: "var(--platform-success-color)" }}
+              >
+                {payoutLabel}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -67,7 +79,7 @@ export function TradingChartAssetBadge({
           onPlayTick();
           onToggleFavorite(selectedCrypto);
         }}
-        className="transition-transform hover:scale-110"
+        className="transition-transform hover:scale-110 hidden md:block"
       >
         <Star
           className={`h-5 w-5 ${

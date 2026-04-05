@@ -221,7 +221,7 @@ export function createResultMarkerSprite(
   });
 
   const width = 112;
-  const height = 40;
+  const height = 48;
   const pointerLength = 7;
 
   const balloon = outer.children.push(
@@ -262,7 +262,7 @@ export function createResultMarkerSprite(
       width: width - 28,
       x: am5.p50,
       centerX: am5.p50,
-      y: 8,
+      y: 10,
       fill: textColor,
       textAlign: "center",
       oversizedBehavior: "fit",
@@ -277,7 +277,7 @@ export function createResultMarkerSprite(
       width: width - 24,
       x: am5.p50,
       centerX: am5.p50,
-      y: 20,
+      y: 24,
       fill: textColor,
       textAlign: "center",
       oversizedBehavior: "fit",
@@ -290,7 +290,7 @@ export function createResultMarkerSprite(
   const closeHit = balloon.children.push(
     am5.Container.new(root, {
       x: width - 18,
-      y: 7,
+      y: 9,
       width: 10,
       height: 10,
       interactive: true,

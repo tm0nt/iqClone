@@ -83,8 +83,8 @@ const SERIES_APPEAR_DURATION_MS = 420;
 const MARKER_APPEAR_DURATION_MS = 240;
 const Y_AXIS_OUTLIER_MULTIPLIER = 4.5;
 const Y_AXIS_BODY_RANGE_MULTIPLIER = 2.8;
-const Y_AXIS_BOTTOM_PAD_RATIO = 0.1;
-const Y_AXIS_TOP_PAD_RATIO = 0.08;
+const Y_AXIS_BOTTOM_PAD_RATIO = 0.06;
+const Y_AXIS_TOP_PAD_RATIO = 0.04;
 const CLIENT_CANDLE_CACHE_TTL_MS = 5_000;
 
 import type { ChartEventType } from "@/hooks/useChartDebugLog";
@@ -115,6 +115,7 @@ export interface StockChartProps {
   onRemoveChart?: (symbol: string) => void;
   chartBackgroundUrl?: string | null;
   tradeHoverDirection?: "buy" | "sell" | null;
+  onOpenMobileMenu?: () => void;
   debugLog?: (
     type: ChartEventType,
     message: string,
@@ -145,6 +146,7 @@ export function StockChart({
   onRemoveChart,
   chartBackgroundUrl,
   tradeHoverDirection = null,
+  onOpenMobileMenu,
   debugLog,
 }: StockChartProps) {
   const t = useTranslations("StockChart");
@@ -359,7 +361,7 @@ export function StockChart({
   const yCurrentRef = useRef<{ min: number; max: number } | null>(null);
   const yLerpRafRef = useRef<number | null>(null);
 
-  const LERP_SPEED = 0.18; // 0-1, higher = faster convergence
+  const LERP_SPEED = 0.32; // 0-1, higher = faster convergence
   const getYAxisStep = useCallback((midpoint: number) => {
     const absoluteMidpoint = Math.abs(midpoint);
     if (absoluteMidpoint >= 1000) return 5;
@@ -606,6 +608,23 @@ export function StockChart({
     const targetMax = Math.ceil((effectiveHi + topPad) / yStep) * yStep;
     yTargetRef.current = { min: targetMin, max: targetMax };
 
+    // Fast snap: if the change is tiny (< 1% of current range), apply instantly
+    const currentY = yCurrentRef.current;
+    if (currentY && !instant) {
+      const currentRange = currentY.max - currentY.min;
+      if (currentRange > 0) {
+        const deltaMin = Math.abs(targetMin - currentY.min);
+        const deltaMax = Math.abs(targetMax - currentY.max);
+        if (deltaMin < currentRange * 0.01 && deltaMax < currentRange * 0.01) {
+          yCurrentRef.current = { min: targetMin, max: targetMax };
+          valueAxis.set("min", targetMin);
+          valueAxis.set("max", targetMax);
+          updateTradeHoverVisualsRef.current();
+          return;
+        }
+      }
+    }
+
     // First call or explicit instant — jump directly and cancel any running lerp
     if (instant || !yCurrentRef.current) {
       if (yLerpRafRef.current !== null) {
@@ -640,7 +659,7 @@ export function StockChart({
 
       // Stop when close enough
       const range = target.max - target.min;
-      const epsilon = range * 0.001;
+      const epsilon = range * 0.005;
       if (
         Math.abs(current.min - target.min) < epsilon &&
         Math.abs(current.max - target.max) < epsilon
@@ -778,18 +797,23 @@ export function StockChart({
         updateTradeHoverVisualsRef.current();
       }
 
-      // X-axis auto-follow (throttled every 10 ticks)
+      // X-axis auto-follow (throttled every 5 ticks for smooth scrolling)
       // dateAxis.zoom triggers "rangechanged" which already refits Y-axis,
       // so we only refit Y manually when zoom is NOT triggered (view is static).
       const cnt = series.data.length;
       lastZoomTickRef.current += 1;
       let didZoom = false;
-      if (lastZoomTickRef.current >= 20) {
+      if (lastZoomTickRef.current >= 5) {
         lastZoomTickRef.current = 0;
         if (dateAxis && cnt > VISIBLE_CANDLE_COUNT && isAtEndRef.current) {
-          const startIndex = cnt - VISIBLE_CANDLE_COUNT;
-          const extraMax = dateAxis.get("extraMax") ?? 0;
-          dateAxis.zoom(startIndex / cnt, 1 + extraMax, false);
+          const targetStart = (cnt - VISIBLE_CANDLE_COUNT) / cnt;
+          const targetEnd = 1 + (dateAxis.get("extraMax") ?? 0);
+          const currentEnd = dateAxis.get("end") ?? 1;
+          const currentStart = dateAxis.get("start") ?? 0;
+          const drift = Math.abs(currentEnd - targetEnd) + Math.abs(currentStart - targetStart);
+          if (drift > 0.001) {
+            dateAxis.zoom(targetStart, targetEnd);
+          }
           didZoom = true;
         }
       }
@@ -997,9 +1021,9 @@ export function StockChart({
               cornerRadiusBL: 0,
               cornerRadiusBR: 0,
               strokeOpacity: 1,
-              width: am5.percent(95),
+              width: am5.percent(100),
               fillOpacity: 1,
-              strokeWidth: 2,
+              strokeWidth: 1,
             });
             newMainSeries.columns.template.adapters.add(
               "fill",
@@ -1149,7 +1173,7 @@ export function StockChart({
           const extraMax = dateAxis.get("extraMax") ?? 0;
           const end = 1 + extraMax;
           const start = len > 0 ? Math.max(0, end - VISIBLE_CANDLE_COUNT / len) : 0;
-          dateAxis.zoom(start, end, false);
+          dateAxis.zoom(start, end, true);
           isAtEndRef.current = true;
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -1167,12 +1191,19 @@ export function StockChart({
         });
       }
 
-      // Refit Y when the user scrolls/zooms the X-axis (instant for direct user action)
+      // Refit Y when the user scrolls/zooms the X-axis (smooth LERP for fluid transitions)
       // Also track whether the view is pinned to the end for auto-follow
+      let yFitPending = false;
       const yFitOnScroll = dateAxis.events.on("rangechanged" as any, () => {
         const end = dateAxis.get("end") ?? 1;
         isAtEndRef.current = end > 0.98;
-        fitYAxisToVisibleData(true);
+        if (!yFitPending) {
+          yFitPending = true;
+          requestAnimationFrame(() => {
+            yFitPending = false;
+            fitYAxisToVisibleData(false);
+          });
+        }
       });
 
       const priceCb = (p: number, raw?: unknown) => {
@@ -1448,8 +1479,8 @@ export function StockChart({
         renderer: am5xy.AxisRendererX.new(root, {
           minGridDistance: 50,
           minorGridEnabled: false,
-          cellStartLocation: 0.05,
-          cellEndLocation: 0.95,
+          cellStartLocation: 0.02,
+          cellEndLocation: 0.98,
         }),
         tooltip: am5.Tooltip.new(root, {}),
       }),
@@ -1894,7 +1925,7 @@ export function StockChart({
     const nextStart = Math.max(0, Math.min(1 - nextRange, center - nextRange / 2));
     const nextEnd = nextStart + nextRange;
 
-    dateAxis.zoom(nextStart, nextEnd, false);
+    dateAxis.zoom(nextStart, nextEnd);
     isAtEndRef.current = nextEnd > 1.0;
   }, []);
 
@@ -1909,11 +1940,11 @@ export function StockChart({
     const end = 1 + extraMax;
 
     if (count <= VISIBLE_CANDLE_COUNT) {
-      dateAxis.zoom(0, end, false);
+      dateAxis.zoom(0, end);
     } else {
       const visibleFraction = VISIBLE_CANDLE_COUNT / count;
       const start = Math.max(0, end - visibleFraction);
-      dateAxis.zoom(start, end, false);
+      dateAxis.zoom(start, end);
     }
 
     isAtEndRef.current = true;
@@ -2300,6 +2331,7 @@ export function StockChart({
           formattedCurrentPrice={formattedCurrentPrice}
           priceChangePercent={priceChangePercent}
           priceChangeText={priceChangeText}
+          payoutRate={selectedCrypto?.payoutRate}
           activeOperationsSummary={activeOperationsSummary}
           isSellingActiveOperations={isSellingActiveOperations}
           cryptos={cryptos}
@@ -2324,6 +2356,7 @@ export function StockChart({
           onZoomChart={zoomChart}
           onFocusLatestCandle={focusLatestCandle}
           onPlayTick={playTick}
+          onOpenMobileMenu={onOpenMobileMenu}
           t={t}
         />
 

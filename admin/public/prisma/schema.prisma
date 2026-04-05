@@ -292,6 +292,7 @@ model Config {
   urlSite                String    @default("https://app.bincebroker.com/")
   logoUrlDark            String    @default("/nextbrokers.png")
   logoUrlWhite           String    @default("/nextbrokers.png")
+  logoUrlMobile          String?
   faviconUrl             String?
   primaryColor           String    @default("#1ca06d")
   primaryHoverColor      String    @default("#0b7250")

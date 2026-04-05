@@ -40,6 +40,7 @@ export const configs = pgTable("Config", {
   urlSite: text("urlSite").notNull().default("https://app.bincebroker.com/"),
   logoUrlDark: text("logoUrlDark").notNull().default("/nextbrokers.png"),
   logoUrlWhite: text("logoUrlWhite").notNull().default("/nextbrokers.png"),
+  logoUrlMobile: text("logoUrlMobile"),
   supportUrl: text("supportUrl"),
   supportAvailabilityText: text("supportAvailabilityText")
     .notNull()

@@ -14,6 +14,7 @@ export const platformConfigSelect = {
   urlSite: true,
   logoUrlDark: true,
   logoUrlWhite: true,
+  logoUrlMobile: true,
   supportUrl: true,
   supportAvailabilityText: true,
   platformTimezone: true,
@@ -93,6 +94,7 @@ export type PlatformConfigValue = BrandingConfigShape &
     urlSite: string;
     logoUrlDark: string;
     logoUrlWhite: string;
+    logoUrlMobile: string | null;
     supportUrl: string | null;
     supportAvailabilityText: string;
     platformTimezone: string;
@@ -170,6 +172,8 @@ async function buildPlatformConfig(): Promise<PlatformConfigValue> {
     logoUrlWhite:
       resolveAdminAssetUrl(config?.logoUrlWhite, adminBaseUrl) ||
       BRANDING_DEFAULTS.logoUrlWhite,
+    logoUrlMobile:
+      resolveAdminAssetUrl(config?.logoUrlMobile, adminBaseUrl) || null,
     supportUrl: typeof config?.supportUrl === "string" ? config.supportUrl : null,
     supportAvailabilityText:
       typeof config?.supportAvailabilityText === "string" &&
@@ -251,6 +255,7 @@ export async function getPlatformConfig() {
       urlSite: "",
       logoUrlDark: BRANDING_DEFAULTS.logoUrlDark,
       logoUrlWhite: BRANDING_DEFAULTS.logoUrlWhite,
+      logoUrlMobile: null,
       supportUrl: null,
       supportAvailabilityText: "TODO DIA, A TODA HORA",
       platformTimezone: "America/Sao_Paulo",

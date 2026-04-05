@@ -560,24 +560,6 @@ export function MobileTradingPanel({
           </div>
         </div>
 
-        {/* Compact Revenue */}
-        <div className="mb-4 bg-transparent p-2 rounded-xl">
-          <div className="flex items-center justify-between">
-            <div
-              className="text-xs"
-              style={{ color: "var(--platform-surface-muted-foreground-color)" }}
-            >
-              {t("revenue")}
-            </div>
-            <div
-              className="text-lg font-bold"
-              style={{ color: "var(--platform-success-color)" }}
-            >
-              {formatCurrency(revenue)}
-            </div>
-          </div>
-        </div>
-
         {/* Buy/Sell Buttons - Main Element */}
         <div className="flex flex-col gap-2 mt-auto mb-2">
           {buttonsDisabled && (

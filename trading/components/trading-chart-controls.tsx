@@ -7,6 +7,7 @@ import {
   Clock,
   Eraser,
   LocateFixed,
+  Menu,
   PenTool,
   Trash2,
   X,
@@ -55,6 +56,7 @@ interface TradingChartControlsProps {
   formattedCurrentPrice: string;
   priceChangePercent: number;
   priceChangeText: string;
+  payoutRate?: number;
   activeOperationsSummary?: {
     count: number;
     remainingLabel: string;
@@ -86,6 +88,7 @@ interface TradingChartControlsProps {
   onZoomChart: (factor: number) => void;
   onFocusLatestCandle: () => void;
   onPlayTick: () => void;
+  onOpenMobileMenu?: () => void;
   t: (key: string) => string;
 }
 
@@ -111,6 +114,7 @@ export function TradingChartControls({
   formattedCurrentPrice,
   priceChangePercent,
   priceChangeText,
+  payoutRate,
   activeOperationsSummary,
   isSellingActiveOperations,
   cryptos,
@@ -135,6 +139,7 @@ export function TradingChartControls({
   onZoomChart,
   onFocusLatestCandle,
   onPlayTick,
+  onOpenMobileMenu,
   t,
 }: TradingChartControlsProps) {
   return (
@@ -157,6 +162,19 @@ export function TradingChartControls({
       ) : null}
 
       <div className="dropdown-container absolute bottom-12 left-4 z-20 flex flex-col gap-2">
+        {onOpenMobileMenu && (
+          <button
+            className="bg-platform-overlay-surface/60 backdrop-blur-sm text-platform-text p-2 rounded-xl cursor-pointer hover:bg-platform-overlay-hover/70 transition-all duration-200 shadow-lg md:hidden"
+            onClick={(event) => {
+              event.stopPropagation();
+              onPlayTick();
+              onOpenMobileMenu();
+            }}
+            title="Menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
         <button
           className="bg-platform-overlay-surface/60 backdrop-blur-sm text-platform-text p-2 rounded-xl cursor-pointer hover:bg-platform-overlay-hover/70 transition-all duration-200 shadow-lg"
           onClick={(event) => {
@@ -510,6 +528,7 @@ export function TradingChartControls({
         priceChangePercent={priceChangePercent}
         priceChangeText={priceChangeText}
         hasActiveSummary={Boolean(activeOperationsSummary)}
+        payoutRate={payoutRate}
         onToggleFavorite={onToggleFavorite}
         onPlayTick={onPlayTick}
       />

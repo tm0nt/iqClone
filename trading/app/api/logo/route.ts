@@ -9,6 +9,7 @@ export async function GET() {
       logo: config.logoUrlDark,
       logoDark: config.logoUrlDark,
       logoWhite: config.logoUrlWhite,
+      logoMobile: config.logoUrlMobile || null,
       nome: config.nomeSite,
       backgroundColor: config.backgroundColor,
     });

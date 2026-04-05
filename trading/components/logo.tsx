@@ -8,6 +8,7 @@ interface LogoProps {
   width?: number;
   height?: number;
   variant?: "auto" | "light" | "dark";
+  useMobile?: boolean;
   onDataLoaded?: (data: { logoUrl: string; nome: string }) => void;
 }
 
@@ -15,17 +16,20 @@ export function Logo({
   width = 200,
   height,
   variant = "auto",
+  useMobile = false,
   onDataLoaded,
 }: LogoProps) {
   const { theme } = useTheme();
   const [data, setData] = useState<{
     logoDark: string;
     logoWhite: string;
+    logoMobile: string | null;
     nome: string;
     backgroundColor: string;
   }>({
     logoDark: "/nextbrokers.png",
     logoWhite: "/nextbrokers.png",
+    logoMobile: null,
     nome: "Empresa",
     backgroundColor: "#252b3b",
   });
@@ -46,6 +50,7 @@ export function Logo({
         const newData = {
           logoDark: responseData.logoDark || responseData.logo || "/nextbrokers.png",
           logoWhite: responseData.logoWhite || responseData.logo || "/nextbrokers.png",
+          logoMobile: responseData.logoMobile || null,
           nome: responseData.nome || "Empresa",
           backgroundColor: responseData.backgroundColor || "#252b3b",
         };
@@ -58,6 +63,7 @@ export function Logo({
         const fallbackData = {
           logoDark: "/nextbrokers.png",
           logoWhite: "/nextbrokers.png",
+          logoMobile: null,
           nome: "Empresa",
           backgroundColor: "#252b3b",
         };
@@ -69,7 +75,7 @@ export function Logo({
     };
   }, []);
 
-  const resolvedLogoUrl =
+  const defaultLogoUrl =
     variant === "light"
       ? data.logoWhite
       : variant === "dark"
@@ -80,6 +86,9 @@ export function Logo({
             logoWhite: data.logoWhite,
             fallback: theme === "dark" ? data.logoWhite : data.logoDark,
           });
+
+  const resolvedLogoUrl =
+    useMobile && data.logoMobile ? data.logoMobile : defaultLogoUrl;
 
   useEffect(() => {
     onDataLoaded?.({

@@ -510,17 +510,17 @@ export default function OverviewSection() {
           </div>
 
           {/* Language selector */}
-          <div className="relative" ref={languageRef}>
+          <div className="relative flex-shrink-0" ref={languageRef}>
             <button
-              className="flex items-center gap-2 py-2 px-3 bg-white/5 text-white rounded-xl transition-all duration-200 focus:outline-none focus:bg-white/10 min-w-[130px]"
+              className="flex items-center gap-2 py-2 px-3 bg-white/5 text-white rounded-xl transition-all duration-200 focus:outline-none focus:bg-white/10 min-w-0 sm:min-w-[130px]"
               onClick={() => setIsLanguageOpen(!isLanguageOpen)}
             >
               <span>{languageOptions.find((opt) => opt.id === selectedLanguage)?.flag}</span>
-              <span className="text-sm flex-1 text-left">{languageOptions.find((opt) => opt.id === selectedLanguage)?.label}</span>
-              <ChevronDown size={14} className={`text-white/40 transition-transform ${isLanguageOpen ? "rotate-180" : ""}`} />
+              <span className="text-sm flex-1 text-left truncate">{languageOptions.find((opt) => opt.id === selectedLanguage)?.label}</span>
+              <ChevronDown size={14} className={`text-white/40 transition-transform flex-shrink-0 ${isLanguageOpen ? "rotate-180" : ""}`} />
             </button>
             {isLanguageOpen && (
-              <div className="absolute top-full right-0 mt-2 bg-black rounded-xl overflow-hidden z-50 shadow-2xl min-w-[130px]">
+              <div className="absolute top-full right-0 mt-2 bg-black rounded-xl overflow-hidden z-50 shadow-2xl min-w-[130px] max-w-[calc(100vw-2rem)]">
                 {languageOptions.map((option) => (
                   <button
                     key={option.id}

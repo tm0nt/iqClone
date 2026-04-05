@@ -22,6 +22,7 @@ interface ConfigInput {
   urlSite?: string;
   logoUrlWhite?: string;
   logoUrlDark?: string;
+  logoUrlMobile?: string;
   supportUrl?: string | null;
   supportAvailabilityText?: string;
   platformTimezone?: string;
@@ -468,6 +469,21 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       logoUrlDark = await handleImage(data.logoDark, logoUrlDark);
       if (logoUrlDark !== existingConfig?.logoUrlDark)
         config.logoUrlDark = logoUrlDark;
+    }
+
+    // Mobile logo
+    if (data.logoMobile) {
+      const logoUrlMobile = await handleImage(
+        data.logoMobile,
+        existingConfig?.logoUrlMobile ?? null,
+      );
+      if (logoUrlMobile !== existingConfig?.logoUrlMobile)
+        config.logoUrlMobile = logoUrlMobile || null;
+    } else if (
+      data.logoUrlMobile !== undefined &&
+      data.logoUrlMobile !== existingConfig?.logoUrlMobile
+    ) {
+      config.logoUrlMobile = data.logoUrlMobile || null;
     }
 
     // Chart background image

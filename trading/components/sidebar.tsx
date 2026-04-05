@@ -696,15 +696,15 @@ export function TradingSidebar({
         }
       `}</style>
 
-      <div className="flex h-screen">
+      <div className="flex h-screen w-full bg-platform-bg">
         {/* Sidebar */}
-        <div className="w-20 border-r border-platform-overlay-hover flex flex-col">
+        <div className="w-16 md:w-20 flex-shrink-0 border-r border-platform-overlay-hover flex flex-col">
           <div className="flex-1">
             {menuItems.map((item, index) => (
               <div key={index} className="relative">
                 <button
                   onClick={item.onClick}
-                  className="flex flex-col items-center justify-center h-20 w-full text-platform-muted hover:text-platform-text hover:bg-platform-overlay-hover transition-colors group"
+                  className="flex flex-col items-center justify-center h-16 md:h-20 w-full text-platform-muted hover:text-platform-text hover:bg-platform-overlay-hover transition-colors group"
                 >
                   <div className="relative">
                     <item.icon className="h-6 w-6 mb-1" />
@@ -728,7 +728,7 @@ export function TradingSidebar({
 
         {/* Portfolio Panel */}
         {isPortfolioOpen && (
-          <div className="w-80 border-r border-platform-overlay-hover flex flex-col">
+          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div className="p-4 border-b border-platform-overlay-hover">
               <div
                 className="relative -m-4 border-b px-3 py-3 pr-12"
@@ -918,7 +918,7 @@ export function TradingSidebar({
 
         {/* Trading History Panel */}
         {isHistoryOpen && (
-          <div className="w-80 border-r border-platform-overlay-hover flex flex-col">
+          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div className="p-4 border-b border-platform-overlay-hover">
               <div
                 className="relative -m-4 border-b px-3 py-3 pr-12"
@@ -1061,7 +1061,7 @@ export function TradingSidebar({
 
         {/* News Panel */}
         {isNewsOpen && (
-          <div className="w-80 border-r border-platform-overlay-hover flex flex-col">
+          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div
               className="relative border-b px-3 py-3 pr-12"
               style={{
@@ -1196,7 +1196,7 @@ export function TradingSidebar({
 
         {/* Promotions Panel */}
         {isPromotionsOpen && (
-          <div className="w-80 border-r border-platform-overlay-hover flex flex-col">
+          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div
               className="relative border-b px-3 py-3 pr-12"
               style={{
@@ -1392,7 +1392,7 @@ export function TradingSidebar({
 
         {/* Asset Selection Panel */}
         {isAssetsOpen && (
-          <div className="w-80 border-r border-platform-overlay-hover flex flex-col">
+          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div
               className="relative border-b px-3 py-3 pr-12"
               style={{

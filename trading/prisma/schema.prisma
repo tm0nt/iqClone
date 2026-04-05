@@ -360,6 +360,7 @@ model Config {
   urlSite                       String   @default("https://app.bincebroker.com/")
   logoUrlDark                   String   @default("default-logo.png")
   logoUrlWhite                  String   @default("default-logo.png")
+  logoUrlMobile                 String?
   supportUrl                    String?
   supportAvailabilityText       String   @default("TODO DIA, A TODA HORA")
   platformTimezone              String   @default("America/Sao_Paulo")

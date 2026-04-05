@@ -39,6 +39,7 @@ type GeneralSettingsState = {
   siteUrl: string;
   logoWhiteUrl: string;
   logoDarkUrl: string;
+  logoMobileUrl: string;
   supportUrl: string;
   supportAvailabilityText: string;
   platformTimezone: string;
@@ -99,6 +100,7 @@ const defaultState: GeneralSettingsState = {
   siteUrl: "",
   logoWhiteUrl: "",
   logoDarkUrl: "",
+  logoMobileUrl: "",
   supportUrl: "",
   supportAvailabilityText: "TODO DIA, A TODA HORA",
   platformTimezone: "America/Sao_Paulo",
@@ -422,6 +424,7 @@ function buildSettingsFromResponse(
     logoWhiteUrl:
       typeof data.logoUrlWhite === "string" ? data.logoUrlWhite : "",
     logoDarkUrl: typeof data.logoUrlDark === "string" ? data.logoUrlDark : "",
+    logoMobileUrl: typeof data.logoUrlMobile === "string" ? data.logoUrlMobile : "",
     supportUrl: typeof data.supportUrl === "string" ? data.supportUrl : "",
     supportAvailabilityText:
       typeof data.supportAvailabilityText === "string"
@@ -683,10 +686,12 @@ export function GeneralTab() {
     useState<GeneralSettingsState>(defaultState);
   const [logoWhite, setLogoWhite] = useState<File | null>(null);
   const [logoDark, setLogoDark] = useState<File | null>(null);
+  const [logoMobile, setLogoMobile] = useState<File | null>(null);
   const [chartBackground, setChartBackground] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [logoWhitePreview, setLogoWhitePreview] = useState<string | null>(null);
   const [logoDarkPreview, setLogoDarkPreview] = useState<string | null>(null);
+  const [logoMobilePreview, setLogoMobilePreview] = useState<string | null>(null);
   const [chartBgPreview, setChartBgPreview] = useState<string | null>(null);
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
 
@@ -711,6 +716,7 @@ export function GeneralTab() {
 
   const prevWhiteUrlRef = useRef<string | null>(null);
   const prevDarkUrlRef = useRef<string | null>(null);
+  const prevMobileUrlRef = useRef<string | null>(null);
   const prevChartBgUrlRef = useRef<string | null>(null);
   const prevFaviconUrlRef = useRef<string | null>(null);
 
@@ -741,6 +747,20 @@ export function GeneralTab() {
       }
     };
   }, [logoDark]);
+
+  useEffect(() => {
+    if (!logoMobile) return;
+    if (prevMobileUrlRef.current) URL.revokeObjectURL(prevMobileUrlRef.current);
+    const url = URL.createObjectURL(logoMobile);
+    prevMobileUrlRef.current = url;
+    setLogoMobilePreview(url);
+    return () => {
+      if (prevMobileUrlRef.current) {
+        URL.revokeObjectURL(prevMobileUrlRef.current);
+        prevMobileUrlRef.current = null;
+      }
+    };
+  }, [logoMobile]);
 
   useEffect(() => {
     if (!chartBackground) return;
@@ -821,6 +841,7 @@ export function GeneralTab() {
       urlSite: generalSettings.siteUrl,
       logoUrlWhite: generalSettings.logoWhiteUrl,
       logoUrlDark: generalSettings.logoDarkUrl,
+      logoUrlMobile: generalSettings.logoMobileUrl || null,
       supportUrl: generalSettings.supportUrl || null,
       supportAvailabilityText:
         generalSettings.supportAvailabilityText || "TODO DIA, A TODA HORA",
@@ -863,6 +884,7 @@ export function GeneralTab() {
 
     if (logoWhite) payload.logoWhite = await readFileAsDataUrl(logoWhite);
     if (logoDark) payload.logoDark = await readFileAsDataUrl(logoDark);
+    if (logoMobile) payload.logoMobile = await readFileAsDataUrl(logoMobile);
     if (chartBackground)
       payload.chartBackground = await readFileAsDataUrl(chartBackground);
     if (favicon) payload.favicon = await readFileAsDataUrl(favicon);
@@ -1170,6 +1192,22 @@ export function GeneralTab() {
             onUrlChange={(url) => updateSetting("logoDarkUrl", url)}
             urlValue={generalSettings.logoDarkUrl}
             previewBg="bg-muted"
+          />
+
+          <ImageUploadZone
+            label="Logotipo mobile"
+            description="Usado no header em dispositivos mobile. Se vazio, usa o logotipo claro."
+            currentUrl={generalSettings.logoMobileUrl}
+            previewUrl={logoMobilePreview}
+            onFileSelect={setLogoMobile}
+            onClear={() => {
+              setLogoMobile(null);
+              setLogoMobilePreview(null);
+              updateSetting("logoMobileUrl", "");
+            }}
+            onUrlChange={(url) => updateSetting("logoMobileUrl", url)}
+            urlValue={generalSettings.logoMobileUrl}
+            previewBg="bg-muted-foreground"
           />
 
           <ImageUploadZone
