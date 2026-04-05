@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { ArrowRight, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import AuthToggle from "@/components/auth/auth-toggle";
-import { registerUser } from "@/lib/auth/auth-service";
+import { registerUser, loginUser } from "@/lib/auth/auth-service";
 import { motion } from "framer-motion";
 import { setAffCookie } from "@/app/actions/setAffCookie";
 import { useSearchParams } from "next/navigation";
@@ -154,6 +154,8 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
       await registerUser(name, email, password);
       trackPlatformPixel("register", { email });
 
+      await loginUser(email, password);
+
       toast.open({
         variant: "success",
         title: t("toast.success.title"),
@@ -161,7 +163,9 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
         duration: 3000
       });
 
-      onToggleMode();
+      setTimeout(() => {
+        window.location.href = "/trading";
+      }, 1000);
     } catch (error) {
       toast.open({
         variant: "error",
