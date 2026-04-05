@@ -22,6 +22,11 @@ interface CryptoSelectorProps {
   onRemoveChart?: (symbol: string) => void;
   assetBrowserMode?: "modal" | "sidebar";
   onOpenAssetBrowser?: () => void;
+  // Mobile price badge props (show price info inline in the trigger)
+  formattedCurrentPrice?: string;
+  priceChangePercent?: number;
+  priceChangeText?: string;
+  payoutRate?: number;
 }
 
 function TradingPairIcon({
@@ -58,6 +63,10 @@ export function CryptoSelector({
   selectedCrypto,
   currentPrice,
   onSelect,
+  formattedCurrentPrice,
+  priceChangePercent,
+  priceChangeText,
+  payoutRate,
   onToggleFavorite,
   onUpdateCryptos,
   openCharts,
@@ -278,14 +287,14 @@ export function CryptoSelector({
         </div>
       ) : (
         <button
-          className="px-3 py-2 rounded-xl cursor-pointer transition-all duration-300 hover:bg-platform-overlay-hover flex items-center group border-b-2 border-b-platform-text w-full max-w-[160px] my-2 mx-4"
+          className="px-2 py-1.5 rounded-xl cursor-pointer transition-all duration-300 hover:bg-platform-overlay-hover flex items-center group border-b-2 border-b-platform-text my-1"
           onClick={() => {
             playTick();
             setIsAddMode(false);
             setIsDropdownOpen(!isDropdownOpen);
           }}
         >
-          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md p-1 shadow-sm mr-2">
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full shadow-sm mr-1.5 flex-shrink-0">
             <TradingPairIcon
               image={selectedCrypto?.image}
               name={selectedCrypto?.name || t("placeholderAlt")}
@@ -294,12 +303,40 @@ export function CryptoSelector({
                 selectedCrypto?.symbol?.slice(0, 3) ||
                 "..."
               }
-              className="h-10 w-10 object-contain"
+              className="h-8 w-8 object-contain"
             />
           </div>
-          <div className="flex flex-col items-start flex-1">
-            <div className="text-platform-text font-medium text-xs">{selectedCrypto?.name || t("selectCrypto")}</div>
-            <div className="text-platform-overlay-muted text-[10px] mt-0.5">{selectedCrypto?.type || ""}</div>
+          <div className="flex flex-col items-start">
+            <div className="text-platform-text font-semibold text-xs leading-tight">
+              {selectedCrypto?.symbol || t("selectCrypto")}
+            </div>
+            {formattedCurrentPrice ? (
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="text-[10px] text-white/70">${formattedCurrentPrice}</span>
+                {priceChangeText && (
+                  <span
+                    className="text-[10px] font-medium"
+                    style={{
+                      color: (priceChangePercent ?? 0) >= 0
+                        ? "var(--platform-success-color)"
+                        : "var(--platform-danger-color)",
+                    }}
+                  >
+                    {priceChangeText}
+                  </span>
+                )}
+                {payoutRate != null && (
+                  <span
+                    className="text-[10px] font-bold"
+                    style={{ color: "var(--platform-success-color)" }}
+                  >
+                    +{Math.round(payoutRate * 100)}%
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="text-platform-overlay-muted text-[10px] mt-0.5">{selectedCrypto?.type || ""}</div>
+            )}
           </div>
           <div className="ml-1">
             <ChevronDown

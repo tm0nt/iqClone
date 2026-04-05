@@ -5,6 +5,7 @@ import {
   Briefcase,
   Clock,
   X,
+  ArrowLeft,
   TrendingUp,
   TrendingDown,
   Newspaper,
@@ -101,6 +102,7 @@ interface TradingSidebarProps {
   activePanel: SidebarPanel;
   onActivePanelChange: (panel: SidebarPanel) => void;
   selectedAssetSymbol?: string;
+  isMobileOverlay?: boolean;
 }
 
 export function TradingSidebar({
@@ -109,6 +111,7 @@ export function TradingSidebar({
   activePanel,
   onActivePanelChange,
   selectedAssetSymbol,
+  isMobileOverlay = false,
 }: TradingSidebarProps) {
   const t = useTranslations("TradingSidebar");
   const playTick = useTickSound();
@@ -696,9 +699,9 @@ export function TradingSidebar({
         }
       `}</style>
 
-      <div className="flex h-screen w-full bg-platform-bg">
-        {/* Sidebar */}
-        <div className="w-16 md:w-20 flex-shrink-0 border-r border-platform-overlay-hover flex flex-col">
+      <div className={`flex h-screen bg-platform-bg ${isMobileOverlay ? "" : "w-full"}`}>
+        {/* Sidebar icon strip */}
+        <div className={`${isMobileOverlay ? "w-14" : "w-16 md:w-20"} flex-shrink-0 border-r border-platform-overlay-hover flex flex-col`}>
           <div className="flex-1">
             {menuItems.map((item, index) => (
               <div key={index} className="relative">
@@ -728,10 +731,10 @@ export function TradingSidebar({
 
         {/* Portfolio Panel */}
         {isPortfolioOpen && (
-          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
+          <div className="w-[min(80vw,320px)] md:w-80 flex-shrink-0 border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div className="p-4 border-b border-platform-overlay-hover">
               <div
-                className="relative -m-4 border-b px-3 py-3 pr-12"
+                className="relative -m-4 border-b px-3 py-3 pl-10 pr-12 md:pl-3"
                 style={{
                   borderColor:
                     "color-mix(in srgb, var(--platform-overlay-border-color) 60%, transparent)",
@@ -744,9 +747,18 @@ export function TradingSidebar({
                     playTick();
                     onActivePanelChange(null);
                   }}
-                  className="absolute right-3 top-3 text-platform-overlay-muted hover:text-platform-text transition-colors"
+                  className="absolute right-3 top-3 text-platform-overlay-muted hover:text-platform-text transition-colors hidden md:block"
                 >
                   <X className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    playTick();
+                    onActivePanelChange(null);
+                  }}
+                  className="absolute left-3 top-3 text-platform-overlay-muted hover:text-platform-text transition-colors md:hidden flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-4 w-4" />
                 </button>
                 <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[var(--platform-overlay-muted-text-color)]">
                   {filteredOpenPositions.length} abertas
@@ -918,10 +930,10 @@ export function TradingSidebar({
 
         {/* Trading History Panel */}
         {isHistoryOpen && (
-          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
+          <div className="w-[min(80vw,320px)] md:w-80 flex-shrink-0 border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div className="p-4 border-b border-platform-overlay-hover">
               <div
-                className="relative -m-4 border-b px-3 py-3 pr-12"
+                className="relative -m-4 border-b px-3 py-3 pl-10 pr-12 md:pl-3"
                 style={{
                   borderColor:
                     "color-mix(in srgb, var(--platform-overlay-border-color) 60%, transparent)",
@@ -934,9 +946,18 @@ export function TradingSidebar({
                     playTick();
                     onActivePanelChange(null);
                   }}
-                  className="absolute right-3 top-3 text-platform-overlay-muted hover:text-platform-text transition-colors"
+                  className="absolute right-3 top-3 text-platform-overlay-muted hover:text-platform-text transition-colors hidden md:block"
                 >
                   <X className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    playTick();
+                    onActivePanelChange(null);
+                  }}
+                  className="absolute left-3 top-3 text-platform-overlay-muted hover:text-platform-text transition-colors md:hidden flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-4 w-4" />
                 </button>
                 <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[var(--platform-overlay-muted-text-color)]">
                   {filteredTrades.length} registros
@@ -1061,7 +1082,7 @@ export function TradingSidebar({
 
         {/* News Panel */}
         {isNewsOpen && (
-          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
+          <div className="w-[min(80vw,320px)] md:w-80 flex-shrink-0 border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div
               className="relative border-b px-3 py-3 pr-12"
               style={{
@@ -1196,7 +1217,7 @@ export function TradingSidebar({
 
         {/* Promotions Panel */}
         {isPromotionsOpen && (
-          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
+          <div className="w-[min(80vw,320px)] md:w-80 flex-shrink-0 border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div
               className="relative border-b px-3 py-3 pr-12"
               style={{
@@ -1392,7 +1413,7 @@ export function TradingSidebar({
 
         {/* Asset Selection Panel */}
         {isAssetsOpen && (
-          <div className="flex-1 md:w-80 md:flex-none border-r border-platform-overlay-hover flex flex-col overflow-hidden">
+          <div className="w-[min(80vw,320px)] md:w-80 flex-shrink-0 border-r border-platform-overlay-hover flex flex-col overflow-hidden">
             <div
               className="relative border-b px-3 py-3 pr-12"
               style={{

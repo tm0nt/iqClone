@@ -404,8 +404,8 @@ export function MobileTradingPanel({
   }, [handleTrade, playTick]);
 
   return (
-    <div className="w-full h-full bg-black flex flex-col rounded-lg overflow-hidden">
-      <div className="p-2 h-full flex flex-col">
+    <div className="w-full bg-black flex flex-col border-t border-white/10">
+      <div className="p-2 flex flex-col">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <div className="text-platform-positive text-xs bg-transparent px-2 py-1 rounded-xl">

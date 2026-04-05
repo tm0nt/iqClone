@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { CryptoSelector } from "@/components/crypto-selector";
-import { TradingChartAssetBadge } from "@/components/trading-chart-asset-badge";
 import { TradingActiveOperationsStrip } from "@/components/trading-active-operations-strip";
 import type { Crypto } from "@/lib/forex-data";
 import type {
@@ -521,18 +520,6 @@ export function TradingChartControls({
         </div>
       )}
 
-      <TradingChartAssetBadge
-        selectedCrypto={selectedCrypto}
-        loadingAssetLabel={loadingAssetLabel}
-        formattedCurrentPrice={formattedCurrentPrice}
-        priceChangePercent={priceChangePercent}
-        priceChangeText={priceChangeText}
-        hasActiveSummary={Boolean(activeOperationsSummary)}
-        payoutRate={payoutRate}
-        onToggleFavorite={onToggleFavorite}
-        onPlayTick={onPlayTick}
-      />
-
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         <div className="block md:hidden">
           <CryptoSelector
@@ -546,6 +533,10 @@ export function TradingChartControls({
             currentChart={currentChart}
             onChangeChart={onChangeChart}
             onRemoveChart={onRemoveChart}
+            formattedCurrentPrice={formattedCurrentPrice}
+            priceChangePercent={priceChangePercent}
+            priceChangeText={priceChangeText}
+            payoutRate={payoutRate}
           />
         </div>
 

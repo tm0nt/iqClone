@@ -75,9 +75,9 @@ export function TradingActiveOperationsStrip({
         </button>
       </div>
 
-      {/* Mobile: compact strip at top-right */}
+      {/* Mobile: compact strip at top-left */}
       <div
-        className="absolute right-3 top-4 z-20 flex items-center gap-2 rounded-xl bg-black/75 px-3 py-1.5 backdrop-blur-sm md:hidden"
+        className="absolute left-3 top-4 z-20 flex items-center gap-2 rounded-xl bg-black/75 px-3 py-1.5 backdrop-blur-sm md:hidden"
       >
         <div className="text-[11px] font-semibold tabular-nums text-white">
           {remainingLabel}

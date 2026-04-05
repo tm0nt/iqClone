@@ -512,11 +512,11 @@ export default function OverviewSection() {
           {/* Language selector */}
           <div className="relative flex-shrink-0" ref={languageRef}>
             <button
-              className="flex items-center gap-2 py-2 px-3 bg-white/5 text-white rounded-xl transition-all duration-200 focus:outline-none focus:bg-white/10 min-w-0 sm:min-w-[130px]"
+              className="flex items-center gap-1.5 py-2 px-2 sm:px-3 bg-white/5 text-white rounded-xl transition-all duration-200 focus:outline-none focus:bg-white/10 sm:min-w-[130px]"
               onClick={() => setIsLanguageOpen(!isLanguageOpen)}
             >
               <span>{languageOptions.find((opt) => opt.id === selectedLanguage)?.flag}</span>
-              <span className="text-sm flex-1 text-left truncate">{languageOptions.find((opt) => opt.id === selectedLanguage)?.label}</span>
+              <span className="text-sm flex-1 text-left truncate hidden sm:inline">{languageOptions.find((opt) => opt.id === selectedLanguage)?.label}</span>
               <ChevronDown size={14} className={`text-white/40 transition-transform flex-shrink-0 ${isLanguageOpen ? "rotate-180" : ""}`} />
             </button>
             {isLanguageOpen && (

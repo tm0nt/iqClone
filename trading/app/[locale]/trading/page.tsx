@@ -13,6 +13,7 @@ import type { Order } from "@/components/type";
 import TradingPanel from "@/components/trading-panel";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { TradingSidebar } from "@/components/sidebar";
 import { useChartMarkers } from "@/hooks/useChartMarkers";
 import { useBalanceSync } from "@/hooks/useBalanceSync";
@@ -267,22 +268,23 @@ export default function Home() {
                   className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                   onClick={handleCloseMobileSidebar}
                 />
-                <div className="relative z-10 flex h-full w-[85vw] max-w-[360px] animate-in slide-in-from-left duration-200">
+                <div className="relative z-10 flex h-full animate-in slide-in-from-left duration-200">
                   <TradingSidebar
                     onSelectAsset={(crypto, addOnly) => {
                       handleCryptoSelect(crypto, addOnly);
-                      handleCloseMobileSidebar();
+                      if (!addOnly) handleCloseMobileSidebar();
                     }}
                     onToggleFavorite={handleToggleFavorite}
                     activePanel={sidebarPanel}
                     onActivePanelChange={setSidebarPanel}
                     selectedAssetSymbol={selectedCrypto?.symbol}
+                    isMobileOverlay
                   />
                 </div>
               </div>
             )}
 
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden relative pb-[172px] md:pb-0">
               {selectedCrypto && tradingPair ? (
                 <StockChart
                   orders={orders}
@@ -339,8 +341,8 @@ export default function Home() {
           </div>
 
           {/* MOBILE FIXED BOTTOM TRADING PANEL */}
-          <div className="md:hidden">
-            {tradingPair ? (
+          {tradingPair && (
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-30">
               <MobileTradingPanel
                 currentPrice={currentPrice}
                 onPlaceOrder={handlePlaceOrder}
@@ -350,14 +352,15 @@ export default function Home() {
                 defaultExpirationMinutes={defaultExpirationMinutes}
                 expirationOptions={expirationOptions}
               />
-            ) : null}
-          </div>
+            </div>
+          )}
 
           <div className="hidden md:flex">
             <Footer />
           </div>
       </main>
       <SettlementToastContainer />
+      <PWAInstallPrompt />
     </ToastContainer>
   );
 }

@@ -122,7 +122,41 @@ export default function Header({
         <div className="flex items-center justify-between h-full">
           {isAccountPage ? (
             <>
-              {/* ACCOUNT PAGE MOBILE: LOGO | SALDO | PROFILE | DEPOSITAR */}
+              {/* ACCOUNT PAGE MOBILE: LOGO | ← TRADEROOM | DINHEIRO */}
+              <div className="flex items-center">
+                <Logo width={100} variant="light" useMobile />
+              </div>
+
+              <div className="flex items-center space-x-3">
+                {/* Back to Trading */}
+                <button
+                  onClick={() => { window.location.href = `/${locale}/trading`; }}
+                  className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-black transition-colors hover:bg-white/90"
+                >
+                  <ArrowLeft size={14} />
+                  <span className="font-medium text-xs">{t("traderoom")}</span>
+                </button>
+
+                {/* Dinheiro/Balance */}
+                <div
+                  ref={accountTriggerRef}
+                  className="cursor-pointer flex items-center space-x-1 hover:bg-platform-surface-alt rounded px-2 py-1 transition-colors"
+                  onClick={toggleAccountDropdown}
+                >
+                  <span
+                    className={`font-bold text-sm ${
+                      selectedAccount === "real" ? "text-platform-positive" : "text-platform-demo"
+                    }`}
+                  >
+                    {isBalanceVisible ? formatCurrency(getBalance()) : t("balanceHidden")}
+                  </span>
+                  <ChevronDown size={12} className="text-platform-overlay-muted" />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* TRADING PAGE MOBILE: LOGO | SALDO | PROFILE | DEPOSITAR */}
               <div className="flex items-center">
                 <Logo width={100} variant="light" useMobile />
               </div>
@@ -173,39 +207,6 @@ export default function Header({
                 >
                   <Banknote size={18} />
                 </Link>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* TRADING PAGE MOBILE: LOGO | TRADEROOM | DINHEIRO */}
-              <div className="flex items-center">
-                <Logo width={100} variant="light" useMobile />
-              </div>
-
-              <div className="flex items-center space-x-3">
-                {/* Traderoom (link para account) */}
-                <Link
-                  href={`/${locale}/account`}
-                  className="flex items-center rounded-lg bg-white px-3 py-1.5 text-black transition-colors hover:bg-white/90"
-                >
-                  <span className="font-medium text-xs">{t("traderoom")}</span>
-                </Link>
-
-                {/* Dinheiro/Balance */}
-                <div
-                  ref={accountTriggerRef}
-                  className="cursor-pointer flex items-center space-x-1 hover:bg-platform-surface-alt rounded px-2 py-1 transition-colors"
-                  onClick={toggleAccountDropdown}
-                >
-                  <span
-                    className={`font-bold text-sm ${
-                      selectedAccount === "real" ? "text-platform-positive" : "text-platform-demo"
-                    }`}
-                  >
-                    {isBalanceVisible ? formatCurrency(getBalance()) : t("balanceHidden")}
-                  </span>
-                  <ChevronDown size={12} className="text-platform-overlay-muted" />
-                </div>
               </div>
             </>
           )}
