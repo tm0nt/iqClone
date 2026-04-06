@@ -2304,7 +2304,7 @@ export function StockChart({
 
         <div
           ref={chartRef}
-          className={`relative z-10 h-full w-full transition-opacity duration-200 ${
+          className={`relative z-10 h-full w-full touch-none transition-opacity duration-200 ${
             loading ? "opacity-0" : "opacity-100"
           }`}
         />
