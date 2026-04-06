@@ -284,43 +284,60 @@ export default function Home() {
               </div>
             )}
 
-            <div className="flex-1 overflow-hidden relative pb-[172px] md:pb-0">
-              {selectedCrypto && tradingPair ? (
-                <StockChart
-                  orders={orders}
-                  entryMarkers={entryMarkers}
-                  resultMarkers={resultMarkers}
-                  onDismissResult={dismissResult}
-                  onCancelOrder={handleCancelOrder}
-                  onPlaceOrder={handlePlaceOrder}
-                  onPriceUpdate={handlePriceUpdate}
-                  tradingPair={tradingPair}
-                  setTradingPair={setTradingPair}
-                  cryptos={cryptos}
-                  selectedCrypto={selectedCrypto}
-                  currentPrice={currentPrice}
-                  onCryptoSelect={handleCryptoSelect}
-                  onToggleFavorite={handleToggleFavorite}
-                  onUpdateCryptos={handleUpdateCryptos}
-                  openCharts={openCharts}
-                  currentChart={currentChart}
-                  onChangeChart={handleChangeChart}
-                  onRemoveChart={removeChart}
-                  chartBackgroundUrl={chartBackgroundUrl}
-                  tradeHoverDirection={tradeHoverDirection}
-                  onOpenMobileMenu={handleOpenMobileSidebar}
-                />
-              ) : pairsLoaded && !hasAvailablePairs ? (
-                <div className="flex h-full w-full items-center justify-center bg-black px-6">
-                  <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 px-6 py-8 text-center text-white backdrop-blur-sm">
-                    <h2 className="text-xl font-semibold">{t("noTradingPairs")}</h2>
-                    <p className="mt-2 text-sm text-white/70">
-                      {t("noTradingPairsDescription")}
-                    </p>
+            <div className="flex-1 overflow-hidden relative pb-[60px] md:pb-0 flex flex-col">
+              <div className="flex-1 overflow-hidden relative">
+                {selectedCrypto && tradingPair ? (
+                  <StockChart
+                    orders={orders}
+                    entryMarkers={entryMarkers}
+                    resultMarkers={resultMarkers}
+                    onDismissResult={dismissResult}
+                    onCancelOrder={handleCancelOrder}
+                    onPlaceOrder={handlePlaceOrder}
+                    onPriceUpdate={handlePriceUpdate}
+                    tradingPair={tradingPair}
+                    setTradingPair={setTradingPair}
+                    cryptos={cryptos}
+                    selectedCrypto={selectedCrypto}
+                    currentPrice={currentPrice}
+                    onCryptoSelect={handleCryptoSelect}
+                    onToggleFavorite={handleToggleFavorite}
+                    onUpdateCryptos={handleUpdateCryptos}
+                    openCharts={openCharts}
+                    currentChart={currentChart}
+                    onChangeChart={handleChangeChart}
+                    onRemoveChart={removeChart}
+                    chartBackgroundUrl={chartBackgroundUrl}
+                    tradeHoverDirection={tradeHoverDirection}
+                    onOpenMobileMenu={handleOpenMobileSidebar}
+                  />
+                ) : pairsLoaded && !hasAvailablePairs ? (
+                  <div className="flex h-full w-full items-center justify-center bg-black px-6">
+                    <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 px-6 py-8 text-center text-white backdrop-blur-sm">
+                      <h2 className="text-xl font-semibold">{t("noTradingPairs")}</h2>
+                      <p className="mt-2 text-sm text-white/70">
+                        {t("noTradingPairsDescription")}
+                      </p>
+                    </div>
                   </div>
+                ) : (
+                  <div className="h-full w-full bg-black" />
+                )}
+              </div>
+
+              {/* Mobile controls (timer, progress, time/value) — inline, scrolls with content */}
+              {tradingPair && (
+                <div className="md:hidden">
+                  <MobileTradingPanel
+                    currentPrice={currentPrice}
+                    onPlaceOrder={handlePlaceOrder}
+                    onOperationConfirmed={handleConfirmOperation}
+                    tradingPair={tradingPair}
+                    payoutRate={selectedCrypto?.payoutRate ?? 0.9}
+                    defaultExpirationMinutes={defaultExpirationMinutes}
+                    expirationOptions={expirationOptions}
+                  />
                 </div>
-              ) : (
-                <div className="h-full w-full bg-black" />
               )}
             </div>
 
@@ -340,20 +357,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* MOBILE FIXED BOTTOM TRADING PANEL */}
-          {tradingPair && (
-            <div className="md:hidden fixed bottom-0 left-0 right-0 z-30">
-              <MobileTradingPanel
-                currentPrice={currentPrice}
-                onPlaceOrder={handlePlaceOrder}
-                onOperationConfirmed={handleConfirmOperation}
-                tradingPair={tradingPair}
-                payoutRate={selectedCrypto?.payoutRate ?? 0.9}
-                defaultExpirationMinutes={defaultExpirationMinutes}
-                expirationOptions={expirationOptions}
-              />
-            </div>
-          )}
 
           <div className="hidden md:flex">
             <Footer />

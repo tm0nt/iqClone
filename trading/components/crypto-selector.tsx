@@ -2,6 +2,7 @@
 
 import { ChevronDown, Search, Star, X, Plus } from "lucide-react";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { debounce } from "lodash";
 import { Crypto } from "@/lib/forex-data";
 import { priceProvider } from "@/lib/price-provider";
@@ -310,33 +311,38 @@ export function CryptoSelector({
             <div className="text-platform-text font-semibold text-xs leading-tight">
               {selectedCrypto?.symbol || t("selectCrypto")}
             </div>
-            {formattedCurrentPrice ? (
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-[10px] text-white/70">${formattedCurrentPrice}</span>
-                {priceChangeText && (
-                  <span
-                    className="text-[10px] font-medium"
-                    style={{
-                      color: (priceChangePercent ?? 0) >= 0
-                        ? "var(--platform-success-color)"
-                        : "var(--platform-danger-color)",
-                    }}
-                  >
-                    {priceChangeText}
-                  </span>
-                )}
-                {payoutRate != null && (
-                  <span
-                    className="text-[10px] font-bold"
-                    style={{ color: "var(--platform-success-color)" }}
-                  >
-                    +{Math.round(payoutRate * 100)}%
-                  </span>
-                )}
-              </div>
-            ) : (
-              <div className="text-platform-overlay-muted text-[10px] mt-0.5">{selectedCrypto?.type || ""}</div>
-            )}
+            <div className="flex items-center gap-1 mt-0.5">
+              {(formattedCurrentPrice || selectedCrypto?.basePrice) ? (
+                <span className="text-[10px] text-white/70">
+                  ${formattedCurrentPrice || selectedCrypto?.basePrice?.toLocaleString("en-US", {
+                    minimumFractionDigits: (selectedCrypto?.basePrice ?? 0) >= 100 ? 2 : 5,
+                    maximumFractionDigits: (selectedCrypto?.basePrice ?? 0) >= 100 ? 2 : 5,
+                  })}
+                </span>
+              ) : (
+                <span className="text-[10px] text-white/70">{selectedCrypto?.type || ""}</span>
+              )}
+              {priceChangeText && (
+                <span
+                  className="text-[10px] font-medium"
+                  style={{
+                    color: (priceChangePercent ?? 0) >= 0
+                      ? "var(--platform-success-color)"
+                      : "var(--platform-danger-color)",
+                  }}
+                >
+                  {priceChangeText}
+                </span>
+              )}
+              {payoutRate != null && (
+                <span
+                  className="text-[10px] font-bold"
+                  style={{ color: "var(--platform-success-color)" }}
+                >
+                  +{Math.round(payoutRate * 100)}%
+                </span>
+              )}
+            </div>
           </div>
           <div className="ml-1">
             <ChevronDown
@@ -367,7 +373,7 @@ export function CryptoSelector({
         </button>
       )}
 
-      {isDropdownOpen && (
+      {isDropdownOpen && createPortal(
         <div
           className={`fixed inset-0 z-[9999] bg-platform-overlay-backdrop/80 backdrop-blur-md ${
             isMobile
@@ -521,7 +527,8 @@ export function CryptoSelector({
               <div className="text-center text-platform-overlay-muted text-xs">{t("selectToContinue")}</div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

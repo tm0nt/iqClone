@@ -404,8 +404,9 @@ export function MobileTradingPanel({
   }, [handleTrade, playTick]);
 
   return (
-    <div className="w-full bg-black flex flex-col border-t border-white/10">
-      <div className="p-2 flex flex-col">
+    <>
+      {/* Controls section — rendered inline in normal document flow */}
+      <div className="w-full bg-black border-t border-white/10 p-2">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <div className="text-platform-positive text-xs bg-transparent px-2 py-1 rounded-xl">
@@ -423,7 +424,7 @@ export function MobileTradingPanel({
         </div>
 
         {/* Compact Controls */}
-        <div className="grid grid-cols-2 gap-2 mb-4 mt-2">
+        <div className="grid grid-cols-2 gap-2 mt-2">
           <div>
             <div className="text-xs text-platform-overlay-muted mb-1">{t("time")}</div>
             <div
@@ -453,7 +454,7 @@ export function MobileTradingPanel({
                 <Plus size={14} strokeWidth={2.5} />
               </button>
               {isTimeMenuOpen && (
-                <div className="absolute left-0 top-[calc(100%+8px)] z-40 w-[220px] rounded-3xl border border-platform-overlay-border bg-platform-bg/96 p-3 shadow-2xl backdrop-blur-xl">
+                <div className="absolute left-0 bottom-[calc(100%+8px)] z-40 w-[220px] rounded-3xl border border-platform-overlay-border bg-platform-bg/96 p-3 shadow-2xl backdrop-blur-xl">
                   <div className="mb-3 border-b border-platform-overlay-border px-1 pb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-platform-overlay-muted">
                     Expiracao
                   </div>
@@ -517,7 +518,7 @@ export function MobileTradingPanel({
                 <Plus size={14} strokeWidth={2.5} />
               </button>
               {isValueMenuOpen && (
-                <div className="absolute left-0 top-[calc(100%+8px)] z-40 w-[220px] rounded-3xl border border-platform-overlay-border bg-platform-bg/96 p-3 shadow-2xl backdrop-blur-xl">
+                <div className="absolute left-0 bottom-[calc(100%+8px)] z-40 w-[220px] rounded-3xl border border-platform-overlay-border bg-platform-bg/96 p-3 shadow-2xl backdrop-blur-xl">
                   <div className="mb-3 flex items-center justify-between border-b border-platform-overlay-border px-1 pb-3">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-platform-overlay-muted">
                       Valor rapido
@@ -559,56 +560,56 @@ export function MobileTradingPanel({
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Buy/Sell Buttons - Main Element */}
-        <div className="flex flex-col gap-2 mt-auto mb-2">
-          {buttonsDisabled && (
-            <div
-              className="text-center text-xs animate-pulse"
-              style={{ color: "var(--platform-warning-color)" }}
-            >
-              {t("waitingNewInterval", { seconds: remainingSeconds })}
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-2">
-            {/* Buy Button */}
-            <button
-              className={`w-full py-3 bg-platform-positive hover:bg-platform-primary-hover text-white font-bold flex items-center justify-center transition-colors rounded-sm ${
-                buttonsDisabled || isProcessingOperation ? "opacity-50 cursor-not-allowed" : "hover:shadow-xl hover:shadow-platform-positive/20"
-              }`}
-              onClick={handleBuyClick}
-              disabled={buttonsDisabled || isProcessingOperation}
-            >
-              {isProcessingOperation ? (
-                <Skeleton className="h-4 w-14 rounded-full bg-white/30" />
-              ) : (
-                <>
-                  <TrendingUp size={16} strokeWidth={2.5} className="mr-1" />
-                  <span className="font-bold">{t("higher")}</span>
-                </>
-              )}
-            </button>
-
-            {/* Sell Button */}
-            <button
-              className={`w-full py-3 bg-platform-danger hover:bg-platform-negative text-white font-bold flex items-center justify-center transition-colors rounded-sm ${
-                buttonsDisabled || isProcessingOperation ? "opacity-50 cursor-not-allowed" : "hover:shadow-xl hover:shadow-platform-danger/20"
-              }`}
-              onClick={handleSellClick}
-              disabled={buttonsDisabled || isProcessingOperation}
-            >
-              {isProcessingOperation ? (
-                <Skeleton className="h-4 w-14 rounded-full bg-white/30" />
-              ) : (
-                <>
-                  <TrendingDown size={16} strokeWidth={2.5} className="mr-1" />
-                  <span className="font-bold">{t("lower")}</span>
-                </>
-              )}
-            </button>
+      {/* Buy/Sell Buttons — fixed at bottom */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-black border-t border-white/10 px-2 py-2">
+        {buttonsDisabled && (
+          <div
+            className="text-center text-xs animate-pulse mb-1"
+            style={{ color: "var(--platform-warning-color)" }}
+          >
+            {t("waitingNewInterval", { seconds: remainingSeconds })}
           </div>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          {/* Buy Button */}
+          <button
+            className={`w-full py-3 bg-platform-positive hover:bg-platform-primary-hover text-white font-bold flex items-center justify-center transition-colors rounded-sm ${
+              buttonsDisabled || isProcessingOperation ? "opacity-50 cursor-not-allowed" : "hover:shadow-xl hover:shadow-platform-positive/20"
+            }`}
+            onClick={handleBuyClick}
+            disabled={buttonsDisabled || isProcessingOperation}
+          >
+            {isProcessingOperation ? (
+              <Skeleton className="h-4 w-14 rounded-full bg-white/30" />
+            ) : (
+              <>
+                <TrendingUp size={16} strokeWidth={2.5} className="mr-1" />
+                <span className="font-bold">{t("higher")}</span>
+              </>
+            )}
+          </button>
+
+          {/* Sell Button */}
+          <button
+            className={`w-full py-3 bg-platform-danger hover:bg-platform-negative text-white font-bold flex items-center justify-center transition-colors rounded-sm ${
+              buttonsDisabled || isProcessingOperation ? "opacity-50 cursor-not-allowed" : "hover:shadow-xl hover:shadow-platform-danger/20"
+            }`}
+            onClick={handleSellClick}
+            disabled={buttonsDisabled || isProcessingOperation}
+          >
+            {isProcessingOperation ? (
+              <Skeleton className="h-4 w-14 rounded-full bg-white/30" />
+            ) : (
+              <>
+                <TrendingDown size={16} strokeWidth={2.5} className="mr-1" />
+                <span className="font-bold">{t("lower")}</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

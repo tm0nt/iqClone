@@ -84,7 +84,7 @@ const MARKER_APPEAR_DURATION_MS = 240;
 const Y_AXIS_OUTLIER_MULTIPLIER = 4.5;
 const Y_AXIS_BODY_RANGE_MULTIPLIER = 2.8;
 const Y_AXIS_BOTTOM_PAD_RATIO = 0.06;
-const Y_AXIS_TOP_PAD_RATIO = 0.04;
+const Y_AXIS_TOP_PAD_RATIO = 0.14;
 const CLIENT_CANDLE_CACHE_TTL_MS = 5_000;
 
 import type { ChartEventType } from "@/hooks/useChartDebugLog";
@@ -1380,7 +1380,7 @@ export function StockChart({
       am5stock.StockChart.new(root, {
         paddingRight: 0,
         paddingLeft: 0,
-        paddingTop: 0,
+        paddingTop: 44,
         paddingBottom: 0,
         background: am5.Rectangle.new(root, {
           fill: am5.color(CHART_COLORS.background),
@@ -2331,7 +2331,7 @@ export function StockChart({
           formattedCurrentPrice={formattedCurrentPrice}
           priceChangePercent={priceChangePercent}
           priceChangeText={priceChangeText}
-          payoutRate={selectedCrypto?.payoutRate}
+          payoutRate={selectedCrypto?.payoutRate ?? 0.9}
           activeOperationsSummary={activeOperationsSummary}
           isSellingActiveOperations={isSellingActiveOperations}
           cryptos={cryptos}
