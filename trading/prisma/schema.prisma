@@ -420,7 +420,7 @@ model Config {
   tradingMinPriceVariation      Float    @default(0)
   tradingSettlementTolerance    Float    @default(0)
   tradingDefaultExpiryMinutes   Int      @default(5)
-  tradingExpiryOptions          String   @default("1,5,10,15,30,60,1440")
+  tradingExpiryOptions          String   @default("5s,30s,1,5,10,15,30,60,1440")
   tradingSettlementGraceSeconds Int      @default(2)
   cpaMin                        Float    @default(30)
   cpaValor                      Float    @default(15)

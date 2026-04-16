@@ -3,7 +3,9 @@ import type { Operation } from "@/store/account-store";
 export const BUTTON_DISABLE_THRESHOLD = 5;
 export const MIN_PERCENTAGE = 5;
 export const QUICK_AMOUNTS = [50, 100, 150, 200] as const;
-export const DEFAULT_TIME_INTERVALS = [1, 5, 10, 15, 30, 60, 1440] as const;
+export const FIVE_SECONDS_IN_MINUTES = 5 / 60;
+export const THIRTY_SECONDS_IN_MINUTES = 30 / 60;
+export const DEFAULT_TIME_INTERVALS = [FIVE_SECONDS_IN_MINUTES, THIRTY_SECONDS_IN_MINUTES, 1, 5, 10, 15, 30, 60, 1440] as const;
 export const SECONDS_IN_DAY = 86400;
 
 export type TradeType = "buy" | "sell";
@@ -72,7 +74,9 @@ export function normalizeTradeAmountStepDown(amount: number): number {
 }
 
 export function formatTradeExpirationLabel(minutes: number): string {
-  return minutes === 1440 ? "1d" : `${minutes}m`;
+  if (minutes === 1440) return "1d";
+  if (minutes < 1) return `${Math.round(minutes * 60)}s`;
+  return `${minutes}m`;
 }
 
 export function calculateSecondsUntilNextInterval(
@@ -86,16 +90,12 @@ export function calculateSecondsUntilNextInterval(
     return Math.floor((tomorrow.getTime() - now.getTime()) / 1000);
   }
 
-  const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-  const nextIntervalMinutes =
-    (Math.floor(currentTotalMinutes / intervalMinutes) + 1) * intervalMinutes;
-  const nextIntervalTime = new Date(now);
-  nextIntervalTime.setHours(Math.floor(nextIntervalMinutes / 60));
-  nextIntervalTime.setMinutes(nextIntervalMinutes % 60);
-  nextIntervalTime.setSeconds(0);
-  nextIntervalTime.setMilliseconds(0);
-
-  return Math.round((nextIntervalTime.getTime() - now.getTime()) / 1000);
+  const intervalSeconds = Math.round(intervalMinutes * 60);
+  const currentTotalSeconds =
+    now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const nextMultiple =
+    (Math.floor(currentTotalSeconds / intervalSeconds) + 1) * intervalSeconds;
+  return nextMultiple - currentTotalSeconds;
 }
 
 export function createTradeDraft({

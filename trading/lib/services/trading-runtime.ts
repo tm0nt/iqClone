@@ -1,4 +1,6 @@
 export const DEFAULT_TRADING_EXPIRY_OPTIONS = [
+  5 / 60,
+  30 / 60,
   1,
   5,
   10,
@@ -35,7 +37,12 @@ type TradingRulesInput = Partial<{
 export function parseTradingExpiryOptions(raw?: string | null) {
   const parsed = (raw ?? "")
     .split(",")
-    .map((value) => Number.parseInt(value.trim(), 10))
+    .map((token) => {
+      const t = token.trim();
+      const secondsMatch = t.match(/^(\d+)s$/i);
+      if (secondsMatch) return parseInt(secondsMatch[1], 10) / 60;
+      return parseFloat(t);
+    })
     .filter((value) => Number.isFinite(value) && value > 0);
 
   const uniqueSorted = [...new Set(parsed)].sort((a, b) => a - b);
@@ -81,7 +88,7 @@ export function tempoToMinutes(
   tempo: string,
   fallbackMinutes: number = DEFAULT_TRADING_RUNTIME_RULES.defaultExpiryMinutes,
 ) {
-  const match = tempo.trim().match(/^(\d+)(m|h|d)$/i);
+  const match = tempo.trim().match(/^(\d+)(s|m|h|d)$/i);
 
   if (!match) {
     return fallbackMinutes;
@@ -95,6 +102,8 @@ export function tempoToMinutes(
   }
 
   switch (unit) {
+    case "s":
+      return amount / 60;
     case "m":
       return amount;
     case "h":
@@ -107,14 +116,9 @@ export function tempoToMinutes(
 }
 
 export function minutesToTempo(minutes: number) {
-  if (minutes >= 1440 && minutes % 1440 === 0) {
-    return `${minutes / 1440}d`;
-  }
-
-  if (minutes >= 60 && minutes % 60 === 0) {
-    return `${minutes / 60}h`;
-  }
-
+  if (minutes < 1) return `${Math.round(minutes * 60)}s`;
+  if (minutes >= 1440 && minutes % 1440 === 0) return `${minutes / 1440}d`;
+  if (minutes >= 60 && minutes % 60 === 0) return `${minutes / 60}h`;
   return `${minutes}m`;
 }
 

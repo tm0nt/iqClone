@@ -15,24 +15,29 @@ export function useTradeCountdown(timeValue: number) {
   const [buttonsDisabled, setButtonsDisabled] = useState(false);
 
   const totalSeconds = useMemo(
-    () => (timeValue === 1440 ? SECONDS_IN_DAY : timeValue * 60),
+    () => (timeValue === 1440 ? SECONDS_IN_DAY : Math.round(timeValue * 60)),
     [timeValue],
+  );
+
+  const disableThreshold = useMemo(
+    () => (totalSeconds <= BUTTON_DISABLE_THRESHOLD ? 1 : BUTTON_DISABLE_THRESHOLD),
+    [totalSeconds],
   );
 
   useEffect(() => {
     const initialSeconds = calculateSecondsUntilNextInterval(timeValue);
     setRemainingSeconds(initialSeconds);
-    setButtonsDisabled(initialSeconds <= BUTTON_DISABLE_THRESHOLD);
+    setButtonsDisabled(initialSeconds <= disableThreshold);
 
     const timer = setInterval(() => {
       setRemainingSeconds((prev) => {
-        if (prev <= BUTTON_DISABLE_THRESHOLD) {
+        if (prev <= disableThreshold) {
           setButtonsDisabled(true);
         }
 
         if (prev <= 1) {
           const resetSeconds = calculateSecondsUntilNextInterval(timeValue);
-          setButtonsDisabled(resetSeconds <= BUTTON_DISABLE_THRESHOLD);
+          setButtonsDisabled(resetSeconds <= disableThreshold);
           return resetSeconds;
         }
 
@@ -41,7 +46,7 @@ export function useTradeCountdown(timeValue: number) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeValue]);
+  }, [timeValue, disableThreshold]);
 
   return {
     buttonsDisabled,
