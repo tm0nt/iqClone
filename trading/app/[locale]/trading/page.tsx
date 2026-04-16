@@ -284,7 +284,7 @@ export default function Home() {
               </div>
             )}
 
-            <div className="flex-1 overflow-hidden relative pb-[60px] md:pb-0 flex flex-col">
+            <div className="flex-1 overflow-hidden relative flex flex-col">
               <div className="flex-1 overflow-hidden relative">
                 {selectedCrypto && tradingPair ? (
                   <StockChart
