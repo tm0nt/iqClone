@@ -249,7 +249,7 @@ export default function Home() {
             onOpenAssetsPanel={() => setSidebarPanel("assets")}
           />
 
-          <div className="flex flex-col flex-1 overflow-hidden md:flex-row">
+          <div className="flex flex-col flex-1 overflow-hidden md:flex-row min-h-0">
             {/* SIDEBAR VISIBLE ONLY ON DESKTOP */}
             <div className="hidden md:flex">
               <TradingSidebar
@@ -284,8 +284,8 @@ export default function Home() {
               </div>
             )}
 
-            <div className="flex-1 overflow-hidden relative flex flex-col">
-              <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden relative flex flex-col min-h-0">
+              <div className="flex-1 overflow-hidden relative min-h-0">
                 {selectedCrypto && tradingPair ? (
                   <StockChart
                     orders={orders}
